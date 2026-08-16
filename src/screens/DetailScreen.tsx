@@ -3,8 +3,272 @@ import { canVoteOn, commentsOf, hasRead, isExpired, myVoteOf, reliabilityOfAnn, 
 import { timeLeft } from '../components/AnnouncementCard';
 import { useStore } from '../store';
 import { cx, formatDateTime, initials, timeAgo } from '../utils';
-import { IconChat, IconChevronLeft, IconClock, IconLink, IconSend, IconThumbDown, IconThumbUp } from '../ui/Icons';
+import { formatSize, getFile } from '../data/files';
+import { COLLECT_ACCESS_LABELS, type CollectAccess, type Submission } from '../types';
+import { IconChat, IconCheckCircle, IconChevronLeft, IconClock, IconDownload, IconFileText, IconLink, IconLock, IconSend, IconThumbDown, IconThumbUp, IconWhatsapp } from '../ui/Icons';
 import { ReliabilityBadge, RoleBadge, TypeBadge, UrgentBadge, stripeColor } from '../components/Badges';
+
+function AccessDots({ access, onChange }: { access: CollectAccess; onChange: (a: CollectAccess) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="dots-wrap">
+      <button
+        className={cx('dots-btn', open && 'on')}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Régler les droits de téléchargement"
+        aria-expanded={open}
+        title="Droit de télécharger les devoirs collectés"
+      >
+        ⋮
+      </button>
+      {open && (
+        <>
+          <div className="dots-backdrop" onClick={() => setOpen(false)} />
+          <div className="dots-menu" role="menu">
+            <div className="dots-menu-title">Droit de télécharger</div>
+            {(['AUTHOR', 'PROF', 'RELAIS'] as CollectAccess[]).map(a => (
+              <button
+                key={a}
+                role="menuitemradio"
+                aria-checked={access === a}
+                className={cx('dots-item', access === a && 'on')}
+                onClick={() => { onChange(a); setOpen(false); }}
+              >
+                <span>{COLLECT_ACCESS_LABELS[a]}</span>
+                {access === a && <IconCheckCircle size={15} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function submissionStamp(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+async function downloadSubmission(s: Submission, senderName?: string) {
+  const blob = await getFile(s.id);
+  if (!blob) return false;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safe = (name: string) => name.replace(/[\\/:*?"<>|]/g, '_');
+  // Récolte : le fichier téléchargé porte le nom de l'étudiant émetteur.
+  const ext = s.fileName.match(/\.[a-z0-9]+$/i)?.[0] ?? (s.fileType.split('/')[1] ? `.${s.fileType.split('/')[1]}` : '');
+  a.download = senderName ? `${safe(senderName)}${ext}` : s.fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  return true;
+}
+
+function waLink(number: string, message: string): string {
+  return `https://wa.me/${number.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+}
+
+function ParticipativePanel({ annId }: { annId: string }) {
+  const { db, user, submitToAnnouncement, deleteSubmission, setCollectAccess } = useStore();
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [missings, setMissings] = useState<string[]>([]);
+
+  const ann = db.announcements.find(a => a.id === annId);
+  const subs = useMemo(() => db.submissions.filter(s => s.announcementId === annId), [db.submissions, annId]);
+
+  // Récolte : une ligne par document, intitulée du nom de l'étudiant émetteur.
+  const ordered = useMemo(
+    () =>
+      [...subs]
+        .map(s => ({ sub: s, student: userById(db, s.userId) }))
+        .sort(
+          (a, b) =>
+            (a.student?.name ?? '').localeCompare(b.student?.name ?? '', 'fr') ||
+            Date.parse(b.sub.createdAt) - Date.parse(a.sub.createdAt)
+        ),
+    [db, subs]
+  );
+
+  if (!ann || !user) return null;
+
+  const expired = isExpired(ann);
+  const mine = subs.filter(s => s.userId === user.id);
+  const nbStudents = new Set(subs.map(s => s.userId)).size;
+  const isStudentSide = user.role === 'ETUDIANT' || user.role === 'RELAIS';
+  const canSubmit = !expired && isStudentSide && !!user.pole && ann.poles.includes(user.pole);
+  const canCollect = user.role === 'PROF' || user.role === 'ADMIN' || user.role === 'RELAIS' || ann.authorId === user.id;
+  const access: CollectAccess = ann.collectAccess ?? 'PROF';
+  const canManageAccess = user.id === ann.authorId || user.role === 'ADMIN';
+  const canDownload =
+    user.role === 'ADMIN' ||
+    user.id === ann.authorId ||
+    (access === 'PROF' && user.role === 'PROF') ||
+    (access === 'RELAIS' && (user.role === 'PROF' || user.role === 'RELAIS'));
+
+  const waMessage = (studentName: string, iso: string) =>
+    `Bonjour ${studentName.split(' ')[0]}, je te confirme la bonne réception de ton document envoyé le ${new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} via 2late (collecte « ${ann.title} »). — ${user.name}`;
+
+  const send = async () => {
+    if (!pending) return;
+    setBusy(true);
+    setError(null);
+    const err = await submitToAnnouncement(annId, pending);
+    setBusy(false);
+    if (err) setError(err);
+    else setPending(null);
+  };
+
+  const downloadAll = async (list: Submission[]) => {
+    const missing: string[] = [];
+    const totals = new Map<string, number>();
+    for (const s of list) totals.set(s.userId, (totals.get(s.userId) ?? 0) + 1);
+    const seen = new Map<string, number>();
+    for (const s of list) {
+      const name = userById(db, s.userId)?.name ?? 'Étudiant';
+      const n = (seen.get(s.userId) ?? 0) + 1;
+      seen.set(s.userId, n);
+      const total = totals.get(s.userId) ?? 1;
+      const ok = await downloadSubmission(s, total > 1 ? `${name} (${n})` : name);
+      if (!ok) missing.push(s.fileName);
+      await new Promise(r => window.setTimeout(r, 500));
+    }
+    setMissings(missing);
+  };
+
+  return (
+    <div className="part-panel">
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <b style={{ fontSize: 15 }}><IconFileText size={16} /> Collecte de documents</b>
+        {subs.length > 0 && (
+          <span className="badge badge-type">{nbStudents} étudiant{nbStudents > 1 ? 's' : ''} · {subs.length} document{subs.length > 1 ? 's' : ''}</span>
+        )}
+      </div>
+
+      {canSubmit && (
+        <div className="sub-dropzone">
+          <div className="sub-dropzone-title"><IconFileText size={17} /> Déposer mon document</div>
+          <p className="sub-dropzone-hint">
+            Sélectionnez votre fichier (PDF, image, document — 20 Mo max) : il est transmis directement, classé à votre nom avec l’heure d’envoi. Plus besoin de WhatsApp.
+          </p>
+          {!pending ? (
+            <label className="btn btn-primary sub-pick">
+              <input
+                type="file"
+                accept="application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+                onChange={e => { setPending(e.target.files?.[0] ?? null); e.currentTarget.value = ''; }}
+              />
+              Choisir mon fichier…
+            </label>
+          ) : (
+            <div className="sub-send">
+              <div className="sub-send-file">
+                <IconFileText size={15} /> {pending.name}
+                <span className="sub-time"> · {formatSize(pending.size)}</span>
+              </div>
+              <div className="row" style={{ marginTop: 10 }}>
+                <button className="btn btn-ghost grow" onClick={() => setPending(null)} disabled={busy}>Annuler</button>
+                <button className="btn btn-primary grow" onClick={() => void send()} disabled={busy}>
+                  <IconSend size={16} /> {busy ? 'Envoi…' : 'Envoyer'}
+                </button>
+              </div>
+            </div>
+          )}
+          {error && <p className="error-text" style={{ marginTop: 8 }}>{error}</p>}
+
+          {mine.length > 0 && (
+            <div className="sub-mine">
+              <div className="sub-mine-title">Mes dépôts ({mine.length})</div>
+              {mine.map(s => (
+                <div className="sub-row own" key={s.id}>
+                  <span className="sub-file"><IconFileText size={14} /> {s.fileName}</span>
+                  <span className="sub-time">{formatSize(s.fileSize)} · envoyé à {submissionStamp(s.createdAt)}</span>
+                  <div className="list-actions">
+                    <button className="text-btn primary" onClick={() => void downloadSubmission(s)}>Télécharger</button>
+                    <button className="text-btn danger" onClick={() => deleteSubmission(s.id)}>Retirer</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!canSubmit && !canCollect && isStudentSide && (
+        <p className="hint">
+          {expired
+            ? 'Cette collecte est terminée : les dépôts ne sont plus acceptés.'
+            : 'Votre pôle n’est pas concerné par cette collecte.'}
+        </p>
+      )}
+
+      {canCollect && (
+        <div className="sub-collect">
+          <div className="sub-collect-head">
+            <span className="sub-collect-title"><IconDownload size={16} /> Récupérer les devoirs</span>
+            <span className="row" style={{ gap: 8 }}>
+              {canManageAccess && <AccessDots access={access} onChange={a => setCollectAccess(annId, a)} />}
+              {canDownload && subs.length > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => void downloadAll(subs)}>
+                  <IconDownload size={14} /> Tout télécharger
+                </button>
+              )}
+            </span>
+          </div>
+          <p className="hint">
+            Une ligne par document, intitulée du <b>nom de l’étudiant</b> qui l’a envoyé, avec l’heure exacte. Le fichier téléchargé porte aussi son nom. Téléchargement autorisé : <b>{COLLECT_ACCESS_LABELS[access]}</b>
+            {canManageAccess && ' — réglez ce droit via le menu ⋮'}.
+          </p>
+          {!canDownload && (
+            <div className="sub-locked">
+              <IconLock size={14} />
+              <span>Consultation seule : le téléchargement est réservé à « {COLLECT_ACCESS_LABELS[access]} ».</span>
+            </div>
+          )}
+
+          {subs.length === 0 && <p className="hint" style={{ marginTop: 10 }}>Aucun dépôt pour l’instant. Les documents envoyés par les étudiants apparaîtront ici.</p>}
+
+          {ordered.map(({ sub: s, student }) => (
+            <div className="sub-row" key={s.id} style={{ alignItems: 'center' }}>
+              <span className="avatar" style={{ width: 30, height: 30, fontSize: 11, flex: 'none' }}>{initials(student?.name ?? '?')}</span>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  <b className="sub-file">{student?.name ?? 'Compte supprimé'}</b>
+                  {student && <RoleBadge role={student.role} />}
+                </div>
+                <span className="sub-time">envoyé à {submissionStamp(s.createdAt)} · {formatSize(s.fileSize)}</span>
+              </div>
+              {student?.whatsapp ? (
+                <button
+                  className="wa-btn"
+                  title={`Contacter ${student.name} sur WhatsApp`}
+                  aria-label={`Contacter ${student.name} sur WhatsApp`}
+                  onClick={() => window.open(waLink(student.whatsapp!, waMessage(student.name, s.createdAt)), '_blank', 'noopener')}
+                >
+                  <IconWhatsapp size={16} />
+                </button>
+              ) : (
+                <span className="wa-btn off" title="Numéro WhatsApp non renseigné par l’étudiant">
+                  <IconWhatsapp size={16} />
+                </span>
+              )}
+              {canDownload && (
+                <button className="text-btn primary" onClick={() => void downloadSubmission(s, student?.name)}>Télécharger</button>
+              )}
+            </div>
+          ))}
+
+          {missings.length > 0 && (
+            <p className="error-text">Fichiers introuvables sur cet appareil : {missings.join(', ')} (les dépôts ne sont pas partagés entre appareils en mode démo).</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DetailScreen({ id, onBack }: { id: string; onBack: () => void }) {
   const { db, user, markRead, vote, addComment } = useStore();
@@ -76,6 +340,8 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           </span>
         </div>
       </div>
+
+      {ann.type === 'PARTICIPATIVE' && <ParticipativePanel annId={ann.id} />}
 
       {author?.role === 'RELAIS' && (
         <div className="vote-panel">

@@ -389,3 +389,13 @@ export function IconLogo(p: P) {
     </svg>
   );
 }
+
+export function IconWhatsapp(p: P) {
+  const { size = 20 } = p;
+  return (
+    <svg {...base(size)}>
+      <path d="M12 3a9 9 0 0 0-7.8 13.4L3 21l4.7-1.2A9 9 0 1 0 12 3Z" />
+      <path d="M9.2 8.6c-.4.1-.9.6-.9 1.4 0 2.4 2.9 5.2 5.3 5.3.8 0 1.4-.6 1.5-1l-1.5-.9-.9.9c-1-.4-2.1-1.4-2.5-2.4l.9-.9-.9-1.5c-.3 0-.7.1-1 .1Z" />
+    </svg>
+  );
+}

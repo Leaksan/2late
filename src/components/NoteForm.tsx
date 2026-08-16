@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DAY_LABELS, type CourseNote, type ScheduleSlot } from '../types';
 import { IconClock, IconClose } from '../ui/Icons';
-import { countdown, uid } from '../utils';
+import { uid } from '../utils';
 
 export function NoteForm({ slot, existing, onClose, onSave, onDelete }: {
   slot?: ScheduleSlot;

@@ -38,15 +38,21 @@ Un écran d'inscription permet aussi de créer un compte Étudiant (choix du pô
 - **Candidature Relais** : message de motivation + numéro WhatsApp obligatoires, visibles par l'admin (lien direct wa.me)
 - **Salons de discussion** : chat général, salons par pôle, salon Administration — étudiants limités à leur pôle par défaut ; l'admin accorde/révoque l'accès à n'importe quel salon (onglet Admin → Salons, ou liste des membres du salon) ; les Relais peuvent révoquer/rétablir l'accès au salon général pour les étudiants de leur pôle. Interface mobile-first : bulles, séparateurs de jour, réponses citées, **mentions @ avec autocomplétion**, appui long (ou clic droit) sur un message → copier, répondre, supprimer, révoquer l'accès ; compteurs de non-lus
 - **Planning hebdomadaire** : créneaux par pôle (jour, horaires, discipline, enseignant, salle, note) — étudiants voient leur pôle, profs/admins gèrent (bouton ＋, modifier/supprimer) et filtrent par pôle. Bandeau « En cours » en direct + prochain cours. **Liens visio/évaluation jamais affichés** : simples boutons « Visio » / « Évaluation » qui ouvrent l'URL dans un nouvel onglet
+- **Rappels de notes perso** : échéances avec compte à rebours à la seconde (bandeau « À lire », planning, liste des notes), les moins de 48 h remontent automatiquement
+- **Syllabus** : espace documentaire (PDF, images, documents — 20 Mo) où les enseignants, relais et l'admin déposent programmes, fiches de TP et guides, ciblés par pôle. Recherche insensible aux accents + tri (récents, anciens, titre, matière) mémorisé. Fichiers stockés dans IndexedDB (séparé de la base localStorage)
+- **Notes & moyenne** : l'étudiant enregistre ses notes de devoirs (/20, coefficient) — moyenne générale pondérée et moyennes par matière, colorées. Accessible depuis le Profil → Résultats
+- **Annonces participatives** : collecte de documents au sein d'une annonce (exercices, devoirs). Les étudiants déposent via bouton d'envoi explicite ; prof/relais/admin récupèrent une liste intitulée du nom de l'étudiant, heure d'envoi exacte, téléchargement individuel ou global (fichiers renommés au nom de l'étudiant), et bouton WhatsApp vers l'émetteur avec message prérempli. **Droits de téléchargement réglables** (menu ⋮) : auteur seul / enseignants & admin / enseignants, admin & relais
+- **Évaluations chronométrées** : fenêtre d'ouverture + durée par éval — avant : bouton désactivé « ouvre à HH:MM » ; pendant : compte à rebours en direct ; après : lien inaccessible. **Liens par groupe** : l'étudiant choisit son groupe (1, 2…) au moment d'accéder à l'éval
 - **Reset mot de passe** : l'admin génère un **lien unique** (usage unique, 24 h) que l'utilisateur utilise pour définir lui-même son nouveau mot de passe — l'admin ne le voit jamais. Écran dédié via `#/reset/<token>`
 - **Feed** : onglet « À lire » (non lues, urgentes en tête puis date décroissante) / « Vu récemment » (historique par date de lecture, bascule automatique à l'ouverture)
 - **Détail** : métadonnées, fil de commentaires, module de vote direct
 - **Admin** : tableau de bord complet — stats (inscrits, relais, annonces urgentes, commentaires, taux de lecture moyen, répartition par pôle et par type, annonces contestées), gestion/modération des annonces (recherche, filtre par rôle, suppression), gestion des membres (annuaire, recherche, filtre, promotion/révocation Relais, désactivation/réactivation, réinitialisation de mot de passe, suppression avec cascade), validation/refus des candidatures Relais (promotion immédiate), création de comptes Professeurs/Admins en modal, modération des commentaires, export JSON des données
-- **PWA** : manifeste, service worker (Workbox, autoUpdate), icônes + maskable, thème sombre Elegant, cartes 24px, offline complet
+- **PWA** : manifeste, service worker (Workbox, autoUpdate), icônes + maskable, thème sombre Elegant, cartes 24px, offline complet. **Carte d'installation** dans le Profil : bouton natif Android (beforeinstallprompt) + instructions pas à pas iPhone (Safari → Partager → Sur l'écran d'accueil)
+- **Profil** : numéro WhatsApp éditable (utilisé par les enseignants pour confirmer la réception des dépôts)
 
 ## Installer l'app
 
-Chrome/Edge desktop : icône d'installation dans la barre d'adresse. Android/iOS Safari : menu → « Ajouter à l'écran d'accueil ». Une fois installée, elle fonctionne hors-ligne.
+Le site officiel : **https://leaksan.github.io/2late/** — depuis le Profil → Application, le bouton « Installer » apparaît sur Android (Chrome) ; sur iPhone, suivre les instructions Safari intégrées. Fonctionne ensuite hors-ligne.
 
 ## Portage Android / iOS (Capacitor)
 
@@ -77,7 +83,7 @@ src/
   types.ts              # modèle de données (rôles, pôles, annonces…)
   data/db.ts            # persistance locale + seed démo + sélecteurs
   components/           # cartes annonce, badges
-  screens/              # Auth, Feed, Détail, Publication, Profil, Admin
+  screens/              # Auth, Feed, Détail, Publication, Planning, Salons, Syllabus, Notes, Profil, Admin
   ui/Icons.tsx          # icônes SVG inline
 scripts/gen-icons.mjs   # générateur d'icônes PNG (sans dépendance)
 ```

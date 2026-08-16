@@ -44,3 +44,17 @@ export function countdown(iso: string): { text: string; late: boolean; ms: numbe
 export function uid(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+// Moyenne pondérée par coefficient ; null si aucune note.
+export function weightedAverage(grades: Array<{ value: number; coef: number }>): number | null {
+  if (grades.length === 0) return null;
+  const coefs = grades.reduce((s, g) => s + g.coef, 0);
+  if (coefs <= 0) return null;
+  return grades.reduce((s, g) => s + g.value * g.coef, 0) / coefs;
+}
+
+// 14 → « 14 », 13.5 → « 13,5 »
+export function frNum(n: number, maxDecimals = 2): string {
+  const fixed = n.toFixed(maxDecimals).replace('.', ',');
+  return fixed.replace(/(,\d*?)0+$/, '$1').replace(/,$/, '');
+}

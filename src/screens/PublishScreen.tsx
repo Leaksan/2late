@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { POLES, POLE_LABELS, TYPES, TYPE_INFO, type Announcement, type AnnLink, type Pole } from '../types';
+import { COLLECT_ACCESS_LABELS, POLES, POLE_LABELS, TYPES, TYPE_INFO, type Announcement, type AnnLink, type CollectAccess, type Pole } from '../types';
 import { useStore } from '../store';
 import { IconAlertCircle, IconChevronLeft, IconClock, IconClose, IconInfinity, IconLink } from '../ui/Icons';
 import { cx, uid } from '../utils';
@@ -26,6 +26,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
   const [durationH, setDurationH] = useState(24);
   const [customH, setCustomH] = useState('');
   const [links, setLinks] = useState<AnnLink[]>([]);
+  const [collectAccess, setCollectAccess] = useState<CollectAccess>('PROF');
   const [error, setError] = useState<string | null>(null);
 
   if (!user) return null;
@@ -49,7 +50,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
       if (!Number.isFinite(hours) || hours <= 0) return setError('Durée invalide pour l’annonce temporaire.');
       expiresAt = new Date(Date.now() + hours * 3600_000).toISOString();
     }
-    const err = publish({ title, type, description, poles, priority, links, expiresAt });
+    const err = publish({ title, type, description, poles, priority, links, expiresAt, collectAccess });
     if (err) setError(err);
     else onDone('new');
   };
@@ -81,7 +82,24 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
               </button>
             ))}
           </div>
+          {type === 'PARTICIPATIVE' && (
+            <p className="hint">Collecte participative : les étudiants déposent leurs documents (exercices, devoirs) directement dans l’annonce — plus de fichiers perdus entre WhatsApp et votre boîte mail. Vous récupérez le tout classé par étudiant, avec l’heure de chaque dépôt.</p>
+          )}
         </div>
+
+        {type === 'PARTICIPATIVE' && (
+          <div className="field">
+            <label>Qui pourra télécharger les documents collectés ? *</label>
+            <div className="chips">
+              {(['AUTHOR', 'PROF', 'RELAIS'] as CollectAccess[]).map(a => (
+                <button type="button" key={a} className={cx('chip', collectAccess === a && 'on')} onClick={() => setCollectAccess(a)}>
+                  {COLLECT_ACCESS_LABELS[a]}
+                </button>
+              ))}
+            </div>
+            <p className="hint">Réglage modifiable à tout moment depuis l’annonce. L’administration garde toujours un accès de supervision.</p>
+          </div>
+        )}
 
         <div className="field">
           <label>Description / Plus d’infos</label>

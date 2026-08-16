@@ -1,18 +1,107 @@
 import { useMemo, useState } from 'react';
 import { ROLE_LABELS } from '../types';
 import { useStore } from '../store';
-import { formatDateTime, initials } from '../utils';
-import { IconDownload, IconLogout, IconMegaphone, IconUser } from '../ui/Icons';
+import { formatDateTime, frNum, initials, weightedAverage } from '../utils';
+import { usePwaInstall } from '../hooks/usePwaInstall';
+import { IconCheckCircle, IconClose, IconDownload, IconGraduation, IconLogout, IconMegaphone, IconUser, IconWhatsapp } from '../ui/Icons';
 import { RoleBadge } from '../components/Badges';
 
-export function ProfileScreen() {
-  const { user, db, logout, applyRelais, resetDemoData } = useStore();
+function InstallCard() {
+  const { canInstall, isIos, isInstalled, install } = usePwaInstall();
+  const [showSteps, setShowSteps] = useState(false);
+
+  return (
+    <>
+      <div className="list-row">
+        <div className="list-ico"><IconDownload size={19} /></div>
+        <div className="grow">
+          <div className="list-label">
+            Installer 2late {isInstalled && <span className="install-ok"><IconCheckCircle size={13} /> installée</span>}
+          </div>
+          <div className="list-sub">
+            {isInstalled
+              ? 'Vous utilisez l’application installée.'
+              : isIos
+                ? 'Sur iPhone, l’installation se fait depuis Safari.'
+                : 'Sur l’écran d’accueil, comme une vraie application.'}
+          </div>
+        </div>
+        {!isInstalled && (
+          <button className="btn btn-primary btn-sm" onClick={() => (canInstall ? void install() : setShowSteps(true))}>
+            {canInstall ? 'Installer' : 'Comment ?'}
+          </button>
+        )}
+      </div>
+      {!isInstalled && (
+        <div className="list-row">
+          <div className="grow">
+            <button className="link-like" onClick={() => setShowSteps(true)}>Voir les instructions d’installation</button>
+          </div>
+        </div>
+      )}
+
+      {showSteps && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowSteps(false); }}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Installer l’application">
+            <div className="modal-handle" />
+            <div className="modal-title">
+              Installer l’application
+              <button className="modal-close" onClick={() => setShowSteps(false)} aria-label="Fermer"><IconClose size={15} /></button>
+            </div>
+
+            <div className="install-os">
+              <div className="install-os-title">🤖 Android (Chrome)</div>
+              {canInstall ? (
+                <>
+                  <p>Votre navigateur propose l’installation directe :</p>
+                  <button
+                    className="btn btn-primary btn-block"
+                    onClick={async () => {
+                      const r = await install();
+                      if (r === 'accepted') setShowSteps(false);
+                    }}
+                  >
+                    Installer maintenant
+                  </button>
+                </>
+              ) : (
+                <ol className="install-steps">
+                  <li>Appuyez sur le menu <b>⋮</b> en haut à droite de Chrome.</li>
+                  <li>Choisissez <b>« Installer l’application »</b> (ou « Ajouter à l’écran d’accueil »).</li>
+                  <li>Confirmez — l’icône 2late apparaît sur votre écran d’accueil.</li>
+                </ol>
+              )}
+            </div>
+
+            <div className="install-os">
+              <div className="install-os-title">🍎 iPhone / iPad (Safari)</div>
+              <ol className="install-steps">
+                <li>Ouvrez 2late dans <b>Safari</b> (obligatoire : pas depuis Chrome).</li>
+                <li>Appuyez sur le bouton <b>Partager</b> <span className="share-ico">⬆︎</span> en bas de l’écran.</li>
+                <li>Faites défiler puis choisissez <b>« Sur l’écran d’accueil »</b>.</li>
+                <li>Appuyez sur <b>« Ajouter »</b> — l’app 2late s’ouvrira en plein écran.</li>
+              </ol>
+            </div>
+
+            <button className="btn btn-ghost btn-block mt12" onClick={() => setShowSteps(false)}>Fermer</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
+  const { user, db, logout, applyRelais, resetDemoData, setWhatsapp } = useStore();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const [appModal, setAppModal] = useState(false);
   const [msg, setMsg] = useState('');
   const [wa, setWa] = useState('');
   const [appErr, setAppErr] = useState<string | null>(null);
+  const [waValue, setWaValue] = useState(user?.whatsapp ?? '');
+  const [waErr, setWaErr] = useState<string | null>(null);
+  const [waSaved, setWaSaved] = useState(false);
 
   const myApplication = useMemo(
     () => (user ? db.applications.find(a => a.userId === user.id && a.status === 'PENDING') : undefined),
@@ -20,6 +109,8 @@ export function ProfileScreen() {
   );
   const isRelais = user?.role === 'RELAIS';
   const canApply = user?.role === 'ETUDIANT';
+  const myGrades = useMemo(() => (user ? db.grades.filter(g => g.userId === user.id) : []), [db.grades, user]);
+  const myAvg = weightedAverage(myGrades);
 
   if (!user) return null;
 
@@ -37,6 +128,52 @@ export function ProfileScreen() {
             {user.pole ? `Pôle ${user.pole} · ` : ''}
             {ROLE_LABELS[user.role]} · inscrit le {formatDateTime(user.createdAt).split(' à ')[0]}
           </div>
+        </div>
+      </div>
+
+      <div className="list-card" style={{ marginBottom: 14 }}>
+        <div className="list-row" style={{ alignItems: 'flex-start' }}>
+          <div className="list-ico" style={{ marginTop: 2 }}><IconWhatsapp size={19} /></div>
+          <div className="grow">
+            <div className="list-label">Mon numéro WhatsApp</div>
+            <input
+              className="input"
+              style={{ marginTop: 8 }}
+              value={waValue}
+              onChange={e => { setWaValue(e.target.value); setWaSaved(false); setWaErr(null); }}
+              placeholder="+241 06 12 34 56"
+              inputMode="tel"
+            />
+            {waErr && <p className="error-text">{waErr}</p>}
+            {waSaved && !waErr && <p className="hint" style={{ color: 'var(--green)' }}>Numéro enregistré ✓</p>}
+            <p className="hint">Permet à l’enseignant de vous contacter sur WhatsApp après un dépôt de documents.</p>
+          </div>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              const err = setWhatsapp(waValue);
+              setWaErr(err);
+              setWaSaved(!err);
+            }}
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+
+      <h2 className="section-title">Résultats</h2>
+      <div className="list-card">
+        <div className="list-row">
+          <div className="list-ico"><IconGraduation size={19} /></div>
+          <div className="grow">
+            <div className="list-label">Mes notes &amp; moyenne</div>
+            <div className="list-sub">
+              {myGrades.length > 0
+                ? `${myGrades.length} note${myGrades.length > 1 ? 's' : ''} enregistrée${myGrades.length > 1 ? 's' : ''} · moyenne ${frNum(myAvg ?? 0)}/20`
+                : 'Enregistrez vos notes de devoirs pour suivre votre moyenne.'}
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onOpenGrades}>Ouvrir</button>
         </div>
       </div>
 
@@ -122,13 +259,7 @@ export function ProfileScreen() {
 
       <h2 className="section-title">Application</h2>
       <div className="list-card">
-        <div className="list-row">
-          <div className="list-ico"><IconDownload size={19} /></div>
-          <div className="grow">
-            <div className="list-label">Installer 2late</div>
-            <div className="list-sub">Depuis le menu du navigateur : « Installer l’application » ou « Ajouter à l’écran d’accueil ».</div>
-          </div>
-        </div>
+        <InstallCard />
         <div className="list-row">
           <div className="list-ico"><IconUser size={19} /></div>
           <div className="grow">
@@ -166,7 +297,7 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      <p className="skeleton-note">2late · Démo locale — v0.1.0</p>
+      <p className="skeleton-note">2late · Démo locale — v0.2.0</p>
     </div>
   );
 }

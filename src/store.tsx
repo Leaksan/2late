@@ -1,10 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { Announcement, Comment, CourseNote, DB, Milestone, Pole, ScheduleSlot, User, Vote } from './types';
-import { loadDB, resetDB, saveDB } from './data/db';
+import type { Announcement, CollectAccess, Comment, CourseNote, DB, Grade, Milestone, Pole, ScheduleSlot, SyllabusDoc, Submission, User, Vote } from './types';
+import { isExpired, loadDB, resetDB, saveDB } from './data/db';
 import { canModerateRoom, defaultRoomAccess, roomById } from './data/chat';
+import { deleteFile, putFile } from './data/files';
 import { uid } from './utils';
 
 const SESSION_KEY = '2late.session';
+const SYLLABUS_MAX_BYTES = 20 * 1024 * 1024;
+const SUBMISSION_MAX_BYTES = 20 * 1024 * 1024;
 
 interface Store {
   db: DB;
@@ -12,7 +15,7 @@ interface Store {
   login(email: string, password: string): string | null;
   register(name: string, email: string, password: string, pole: Pole): string | null;
   logout(): void;
-  publish(input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null }): string | null;
+  publish(input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess }): string | null;
   markRead(announcementId: string): void;
   vote(announcementId: string, value: 1 | -1): void;
   addComment(announcementId: string, body: string): void;
@@ -39,6 +42,14 @@ interface Store {
   resetMilestoneReached(id: string): void;
   upsertCourseNote(note: CourseNote): void;
   deleteCourseNote(id: string): void;
+  addSyllabusDoc(input: { title: string; description?: string; poles: Pole[]; discipline?: string; file: File }): Promise<string | null>;
+  deleteSyllabusDoc(id: string): void;
+  addGrade(input: { discipline: string; title: string; value: number; coef: number }): string | null;
+  deleteGrade(id: string): void;
+  submitToAnnouncement(announcementId: string, file: File): Promise<string | null>;
+  deleteSubmission(id: string): void;
+  setCollectAccess(announcementId: string, access: CollectAccess): void;
+  setWhatsapp(number: string): string | null;
   resetDemoData(): void;
 }
 
@@ -101,7 +112,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUserId(null);
   }, []);
 
-  const publish = useCallback((input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null }): string | null => {
+  const publish = useCallback((input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess }): string | null => {
     if (!user) return 'Session expirée.';
     if (!input.title.trim()) return 'Le titre est obligatoire.';
     if (input.poles.length === 0) return 'Sélectionnez au moins un pôle cible.';
@@ -120,6 +131,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         priority: input.priority,
         links: links.length ? links : undefined,
         expiresAt: input.expiresAt ?? null,
+        collectAccess: input.type === 'PARTICIPATIVE' ? (input.collectAccess ?? 'PROF') : undefined,
         createdAt: new Date().toISOString()
       });
     });
@@ -420,6 +432,114 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, [mutate]);
 
+  const addSyllabusDoc = useCallback(async (input: { title: string; description?: string; poles: Pole[]; discipline?: string; file: File }): Promise<string | null> => {
+    if (!user) return 'Session expirée.';
+    if (user.role !== 'PROF' && user.role !== 'RELAIS' && user.role !== 'ADMIN') return 'Seuls les enseignants, relais et l’administration peuvent déposer un document.';
+    if (!input.title.trim()) return 'Le titre est obligatoire.';
+    if (input.poles.length === 0) return 'Sélectionnez au moins un pôle cible.';
+    if (!input.file) return 'Choisissez un fichier à déposer.';
+    if (input.file.size > SYLLABUS_MAX_BYTES) return 'Fichier trop volumineux : 20 Mo maximum.';
+    const id = uid('doc');
+    await putFile(id, input.file);
+    mutate(d => {
+      d.syllabusDocs.push({
+        id,
+        authorId: user.id,
+        title: input.title.trim(),
+        description: input.description?.trim() || undefined,
+        poles: input.poles,
+        discipline: input.discipline?.trim() || undefined,
+        fileName: input.file.name,
+        fileType: input.file.type || 'application/octet-stream',
+        fileSize: input.file.size,
+        createdAt: new Date().toISOString()
+      });
+    });
+    return null;
+  }, [user, mutate]);
+
+  const deleteSyllabusDoc = useCallback((id: string) => {
+    mutate(d => {
+      d.syllabusDocs = d.syllabusDocs.filter(doc => doc.id !== id);
+    });
+    void deleteFile(id).catch(() => undefined);
+  }, [mutate]);
+
+  const addGrade = useCallback((input: { discipline: string; title: string; value: number; coef: number }): string | null => {
+    if (!user) return 'Session expirée.';
+    if (!input.discipline.trim()) return 'Indiquez la matière.';
+    if (!input.title.trim()) return 'Indiquez l’intitulé du devoir.';
+    if (!Number.isFinite(input.value) || input.value < 0 || input.value > 20) return 'Note invalide : entre 0 et 20.';
+    if (!Number.isFinite(input.coef) || input.coef <= 0 || input.coef > 10) return 'Coefficient invalide : entre 0,5 et 10.';
+    mutate(d => {
+      d.grades.push({
+        id: uid('g'),
+        userId: user.id,
+        discipline: input.discipline.trim(),
+        title: input.title.trim(),
+        value: input.value,
+        coef: input.coef,
+        createdAt: new Date().toISOString()
+      });
+    });
+    return null;
+  }, [user, mutate]);
+
+  const deleteGrade = useCallback((id: string) => {
+    mutate(d => {
+      d.grades = d.grades.filter(g => g.id !== id);
+    });
+  }, [mutate]);
+
+  const submitToAnnouncement = useCallback(async (announcementId: string, file: File): Promise<string | null> => {
+    if (!user) return 'Session expirée.';
+    const ann = db.announcements.find(a => a.id === announcementId);
+    if (!ann || ann.type !== 'PARTICIPATIVE') return 'Cette annonce n’accepte pas de dépôt.';
+    if (isExpired(ann)) return 'Cette collecte est expirée.';
+    if (!user.pole || !ann.poles.includes(user.pole)) return 'Votre pôle n’est pas concerné par cette collecte.';
+    if (file.size > SUBMISSION_MAX_BYTES) return 'Fichier trop volumineux : 20 Mo maximum.';
+    const id = uid('sub');
+    await putFile(id, file);
+    mutate(d => {
+      d.submissions.push({
+        id,
+        announcementId,
+        userId: user.id,
+        fileName: file.name,
+        fileType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        createdAt: new Date().toISOString()
+      });
+    });
+    return null;
+  }, [user, db.announcements, mutate]);
+
+  const deleteSubmission = useCallback((id: string) => {
+    mutate(d => {
+      d.submissions = d.submissions.filter(s => s.id !== id);
+    });
+    void deleteFile(id).catch(() => undefined);
+  }, [mutate]);
+
+  const setCollectAccess = useCallback((announcementId: string, access: CollectAccess) => {
+    if (!user) return;
+    mutate(d => {
+      const ann = d.announcements.find(a => a.id === announcementId);
+      if (ann && (ann.authorId === user.id || user.role === 'ADMIN')) ann.collectAccess = access;
+    });
+  }, [user, mutate]);
+
+  const setWhatsapp = useCallback((number: string): string | null => {
+    if (!user) return 'Session expirée.';
+    const wa = number.trim();
+    if (wa && wa.replace(/\D/g, '').length < 8) return 'Numéro WhatsApp invalide (indicatif inclus, ex. +241 06 12 34 56).';
+    mutate(d => {
+      const me = d.users.find(u => u.id === user.id);
+      if (me) me.whatsapp = wa || undefined;
+    });
+    return null;
+  }, [user, mutate]);
+
   const resetDemoData = useCallback(() => {
     const fresh = resetDB();
     setDB(fresh);
@@ -430,8 +550,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser,
     setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken,
     sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot,
-  upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, resetDemoData
-  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, resetDemoData]);
+  upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setWhatsapp, resetDemoData
+  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setWhatsapp, resetDemoData]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

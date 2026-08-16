@@ -1,8 +1,16 @@
 export type Role = 'ETUDIANT' | 'RELAIS' | 'PROF' | 'ADMIN';
 export type Pole = 'STI' | 'SEDG' | 'MPI' | 'SVT' | 'SHS';
-export type AnnouncementType = 'EVALUATION' | 'DEVOIR' | 'VISIO' | 'GENERALE' | 'EMPLOI_DU_TEMPS';
+export type AnnouncementType = 'EVALUATION' | 'DEVOIR' | 'VISIO' | 'GENERALE' | 'EMPLOI_DU_TEMPS' | 'PARTICIPATIVE';
 export type Priority = 'NORMALE' | 'URGENTE';
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REFUSED';
+// Qui a le droit de télécharger les documents collectés d'une annonce participative.
+export type CollectAccess = 'AUTHOR' | 'PROF' | 'RELAIS';
+
+export const COLLECT_ACCESS_LABELS: Record<CollectAccess, string> = {
+  AUTHOR: 'Uniquement l’auteur de la collecte',
+  PROF: 'Enseignants & administration',
+  RELAIS: 'Enseignants, admin & relais'
+};
 
 export interface User {
   id: string;
@@ -11,6 +19,7 @@ export interface User {
   password: string;
   role: Role;
   pole?: Pole;
+  whatsapp?: string;
   disabled?: boolean;
   createdAt: string;
 }
@@ -32,6 +41,7 @@ export interface Announcement {
   reliabilityOverride?: number | null;
   links?: AnnLink[];
   expiresAt?: string | null;
+  collectAccess?: CollectAccess;
   createdAt: string;
 }
 
@@ -136,6 +146,9 @@ export interface ScheduleSlot {
   room?: string;
   visioUrl?: string;
   evalUrl?: string;
+  evalLinks?: Array<{ group: string; url: string }>;
+  evalStartsAt?: string | null;
+  evalMinutes?: number;
   visioOpen?: boolean;
   evalOpen?: boolean;
   coursePostponed?: boolean;
@@ -165,6 +178,40 @@ export interface CourseNote {
   createdAt: string;
 }
 
+export interface SyllabusDoc {
+  id: string;
+  authorId: string;
+  title: string;
+  description?: string;
+  poles: Pole[];
+  discipline?: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  seed?: boolean;
+  createdAt: string;
+}
+
+export interface Grade {
+  id: string;
+  userId: string;
+  discipline: string;
+  title: string;
+  value: number;
+  coef: number;
+  createdAt: string;
+}
+
+export interface Submission {
+  id: string;
+  announcementId: string;
+  userId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
 export interface DB {
   version: number;
   users: User[];
@@ -181,6 +228,9 @@ export interface DB {
   subjects: Subject[];
   milestones: Milestone[];
   courseNotes: CourseNote[];
+  syllabusDocs: SyllabusDoc[];
+  grades: Grade[];
+  submissions: Submission[];
 }
 
 export const POLES: Pole[] = ['STI', 'SEDG', 'MPI', 'SVT', 'SHS'];
@@ -193,14 +243,15 @@ export const POLE_LABELS: Record<Pole, string> = {
   SHS: 'Sciences Humaines et Sociales'
 };
 
-export const TYPES: AnnouncementType[] = ['EVALUATION', 'DEVOIR', 'VISIO', 'GENERALE', 'EMPLOI_DU_TEMPS'];
+export const TYPES: AnnouncementType[] = ['EVALUATION', 'DEVOIR', 'VISIO', 'GENERALE', 'EMPLOI_DU_TEMPS', 'PARTICIPATIVE'];
 
 export const TYPE_INFO: Record<AnnouncementType, { label: string }> = {
   EVALUATION: { label: 'Évaluation' },
   DEVOIR: { label: 'Devoir à rendre' },
   VISIO: { label: 'Session visio' },
   GENERALE: { label: 'Annonce générale' },
-  EMPLOI_DU_TEMPS: { label: 'Changement d’emploi du temps' }
+  EMPLOI_DU_TEMPS: { label: 'Changement d’emploi du temps' },
+  PARTICIPATIVE: { label: 'Collecte participative' }
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

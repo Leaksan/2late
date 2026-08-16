@@ -24,9 +24,10 @@ export function TypeBadge({ ann }: { ann: Announcement }) {
     DEVOIR: 'Devoir à rendre',
     VISIO: 'Session visio',
     GENERALE: 'Annonce générale',
-    EMPLOI_DU_TEMPS: 'Emploi du temps'
+    EMPLOI_DU_TEMPS: 'Emploi du temps',
+    PARTICIPATIVE: 'Collecte participative'
   };
-  return <span className="badge badge-type">{labels[ann.type]}</span>;
+  return <span className={cx('badge badge-type', ann.type === 'PARTICIPATIVE' && 'badge-participative')}>{labels[ann.type]}</span>;
 }
 
 export function ReliabilityBadge({ pct, total }: { pct: number | null; total: number }) {

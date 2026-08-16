@@ -28,6 +28,9 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
   const rel = reliabilityOfAnn(db, ann);
   const nbComments = commentsOf(db, ann.id).length;
   const expired = isExpired(ann);
+  const isParticipative = ann.type === 'PARTICIPATIVE';
+  const isCollector = !!user && (user.role === 'PROF' || user.role === 'ADMIN' || user.role === 'RELAIS' || ann.authorId === user.id);
+  const nbSubs = isParticipative ? db.submissions.filter(s => s.announcementId === ann.id).length : 0;
 
   return (
     <div
@@ -43,6 +46,13 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
           {author && <RoleBadge role={author.role} />}
           {ann.priority === 'URGENTE' && !expired && <UrgentBadge />}
           <TypeBadge ann={ann} />
+          {isParticipative && (
+            isCollector ? (
+              nbSubs > 0 && <span className="badge badge-reliable">📥 {nbSubs} dépôt{nbSubs > 1 ? 's' : ''} à récupérer</span>
+            ) : (
+              <span className="badge badge-participative">📥 Je dépose mes documents</span>
+            )
+          )}
           {isRelais && <ReliabilityBadge pct={rel.pct} total={rel.total} />}
           {expired ? (
             <span className="badge badge-off">Expirée</span>

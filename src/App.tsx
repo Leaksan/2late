@@ -12,15 +12,17 @@ import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { RoomsScreen } from './screens/RoomsScreen';
 import { ChatRoomScreen } from './screens/ChatRoomScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
+import { SyllabusScreen } from './screens/SyllabusScreen';
+import { GradesScreen } from './screens/GradesScreen';
 import { mentionPending, totalUnread } from './data/chat';
-import { IconBell, IconCalendar, IconChat, IconGauge, IconLogo, IconUser } from './ui/Icons';
+import { IconBell, IconBook, IconCalendar, IconChat, IconGauge, IconLogo, IconUser } from './ui/Icons';
 import { cx } from './utils';
 import type { Milestone } from './types';
 
-type Tab = 'feed' | 'admin' | 'rooms' | 'schedule' | 'profile';
+type Tab = 'feed' | 'admin' | 'rooms' | 'schedule' | 'syllabus' | 'profile';
 
 interface View {
-  name: 'feed' | 'detail' | 'publish' | 'profile' | 'admin' | 'rooms' | 'chat' | 'schedule';
+  name: 'feed' | 'detail' | 'publish' | 'profile' | 'admin' | 'rooms' | 'chat' | 'schedule' | 'syllabus' | 'grades';
   annId?: string;
   roomId?: string;
 }
@@ -30,6 +32,7 @@ const TAB_TITLES: Record<Tab, { title: string; sub: string }> = {
   admin: { title: 'Administration', sub: 'Pilotage de la plateforme' },
   rooms: { title: 'Salons', sub: 'Discussions de la communauté' },
   schedule: { title: 'Planning', sub: 'Cours de la semaine' },
+  syllabus: { title: 'Syllabus', sub: 'Documents officiels des cours' },
   profile: { title: 'Mon profil', sub: 'Compte et statut' }
 };
 
@@ -82,8 +85,8 @@ export default function App() {
 
   if (!user) return <AuthScreen />;
 
-  const tab: Tab = view.name === 'admin' ? 'admin' : view.name === 'profile' ? 'profile' : view.name === 'rooms' || view.name === 'chat' ? 'rooms' : view.name === 'schedule' ? 'schedule' : 'feed';
-  const isRoot = view.name === 'feed' || view.name === 'profile' || view.name === 'admin' || view.name === 'rooms' || view.name === 'schedule';
+  const tab: Tab = view.name === 'admin' ? 'admin' : view.name === 'profile' || view.name === 'grades' ? 'profile' : view.name === 'rooms' || view.name === 'chat' ? 'rooms' : view.name === 'schedule' ? 'schedule' : view.name === 'syllabus' ? 'syllabus' : 'feed';
+  const isRoot = view.name === 'feed' || view.name === 'profile' || view.name === 'admin' || view.name === 'rooms' || view.name === 'schedule' || view.name === 'syllabus';
   const isChat = view.name === 'chat';
   const detailOk = view.name === 'detail' && !!view.annId && db.announcements.some(a => a.id === view.annId);
 
@@ -117,7 +120,7 @@ export default function App() {
           ) : (
               <div>
                 <div className="topbar-title" style={{ fontSize: 18 }}>
-                  {view.name === 'detail' ? 'Annonce' : view.name === 'publish' ? 'Nouvelle annonce' : view.name === 'chat' ? 'Discussion' : ''}
+                  {view.name === 'detail' ? 'Annonce' : view.name === 'publish' ? 'Nouvelle annonce' : view.name === 'chat' ? 'Discussion' : view.name === 'grades' ? 'Mes notes' : ''}
                 </div>
                 <div className="topbar-sub">{user.pole ? POLE_LABELS[user.pole] : ROLE_SHORT[user.role]}</div>
               </div>
@@ -147,7 +150,11 @@ export default function App() {
         />
       )}
 
-      {view.name === 'profile' && <ProfileScreen />}
+      {view.name === 'profile' && <ProfileScreen onOpenGrades={() => go('grades')} />}
+
+      {view.name === 'grades' && (
+        <GradesScreen onBack={() => go('profile')} />
+      )}
 
       {view.name === 'rooms' && (
         <main className="screen">
@@ -158,6 +165,12 @@ export default function App() {
       {view.name === 'schedule' && (
         <main className="screen">
           <ScheduleScreen />
+        </main>
+      )}
+
+      {view.name === 'syllabus' && (
+        <main className="screen">
+          <SyllabusScreen />
         </main>
       )}
 
@@ -209,6 +222,14 @@ export default function App() {
           >
             <IconCalendar size={22} />
             Planning
+          </button>
+
+          <button
+            className={cx('bottomnav-item', view.name === 'syllabus' && 'active')}
+            onClick={() => go('syllabus')}
+          >
+            <IconBook size={22} />
+            Syllabus
           </button>
 
           <button

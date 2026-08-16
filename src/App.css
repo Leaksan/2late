@@ -1362,3 +1362,293 @@ button:disabled { cursor: not-allowed; }
   font-weight: 800;
   box-shadow: 0 2px 10px rgba(124, 185, 255, 0.5);
 }
+
+/* ---------- Syllabus ---------- */
+.syl-card {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-1);
+}
+.syl-card-head { display: flex; gap: 12px; align-items: flex-start; }
+.syl-ext {
+  flex: none;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 1.5px solid;
+  border-radius: var(--radius-xs);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: var(--card-2);
+}
+.syl-title { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.syl-sub { font-size: 12px; color: var(--faint); margin-top: 3px; }
+.syl-desc { font-size: 13px; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
+.syl-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.syl-tag {
+  font-size: 11px; font-weight: 600;
+  color: var(--primary);
+  background: rgba(124, 185, 255, 0.12);
+  border: 1px solid rgba(124, 185, 255, 0.25);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.syl-info { font-size: 11px; color: var(--faint); margin-left: auto; }
+.syl-file-input {
+  display: flex; gap: 10px; align-items: center;
+  border: 1px dashed var(--stroke);
+  border-radius: var(--radius-s);
+  background: var(--card-2);
+  padding: 12px 14px;
+  font-size: 13px; color: var(--muted);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.syl-file-input input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.syl-file-size { color: var(--faint); white-space: nowrap; }
+
+/* ---------- Installation PWA ---------- */
+.install-ok {
+  display: inline-flex; gap: 4px; align-items: center;
+  color: var(--green);
+  font-size: 12px; font-weight: 600;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.install-os { margin-bottom: 16px; }
+.install-os-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.install-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.install-steps li { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.install-steps b { color: var(--text); }
+.share-ico { color: var(--primary); }
+.link-like {
+  background: none; border: none; padding: 0;
+  color: var(--primary); font-size: 13px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Syllabus : recherche & tri ---------- */
+.syl-toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+.syl-search { position: relative; flex: 1; min-width: 0; }
+.syl-search .input { padding-right: 36px; }
+.syl-search-clear {
+  position: absolute; right: 8px; top: 50%;
+  transform: translateY(-50%);
+  background: var(--card-2); border: 1px solid var(--stroke);
+  border-radius: 999px; color: var(--muted);
+  width: 24px; height: 24px;
+  display: grid; place-items: center; cursor: pointer;
+}
+.syl-sort { flex: none; width: auto; }
+.syl-count { font-size: 12px; color: var(--faint); margin: 0 0 10px; }
+
+/* ---------- Notes & moyenne ---------- */
+.grade-hero {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-m);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-1);
+  margin-bottom: 14px;
+}
+.grade-hero.low { border-color: rgba(255, 92, 92, 0.35); }
+.grade-hero-label { font-size: 12px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: 0.4px; }
+.grade-hero-num { font-size: 44px; font-weight: 800; line-height: 1.15; margin-top: 4px; }
+.grade-hero-num small { font-size: 15px; font-weight: 600; color: var(--faint); margin-left: 2px; }
+.grade-hero-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.grade-group {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-m);
+  padding: 4px 14px;
+  margin-bottom: 12px;
+}
+.grade-group-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+.grade-group-name { font-size: 14px; font-weight: 700; }
+.grade-group-avg { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.grade-row { display: flex; gap: 10px; align-items: center; padding: 10px 0; }
+.grade-row + .grade-row { border-top: 1px solid var(--stroke-soft); }
+.grade-row-title { font-size: 13.5px; font-weight: 600; }
+.grade-row-sub { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+.grade-val { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grade-val small { font-size: 11px; font-weight: 600; color: var(--faint); }
+.grade-del {
+  flex: none;
+  background: none; border: none;
+  color: var(--faint);
+  font-size: 18px; line-height: 1;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  border-radius: 999px; cursor: pointer;
+}
+.grade-del:hover { color: var(--red); background: var(--card-2); }
+
+/* ---------- Collecte participative ---------- */
+.badge-participative {
+  color: #7CD992;
+  background: rgba(61, 214, 140, 0.12);
+  border-color: rgba(61, 214, 140, 0.3);
+}
+.part-panel {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-1);
+  margin-bottom: 16px;
+}
+.sub-list { margin-top: 10px; display: grid; gap: 6px; }
+.sub-row {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center;
+  padding: 8px 10px;
+  background: var(--card-2);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-xs);
+}
+.sub-row.own { border-color: rgba(124, 185, 255, 0.3); }
+.sub-file { font-size: 13px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; overflow-wrap: anywhere; }
+.sub-time { font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.sub-collect-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.sub-group {
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--bg-elev);
+}
+.sub-group-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+/* ---------- Évaluation chronométrée ---------- */
+.eval-countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: var(--yellow);
+}
+.eval-wait, .eval-ended { opacity: 0.6; cursor: not-allowed; }
+.eval-ended { color: var(--faint); }
+
+/* ---------- Collecte : dropzone & droits ---------- */
+.sub-dropzone {
+  border: 1.5px dashed rgba(124, 185, 255, 0.45);
+  background: rgba(124, 185, 255, 0.06);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.sub-dropzone-title {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 15px; font-weight: 800; color: var(--primary);
+  margin-bottom: 6px;
+}
+.sub-dropzone-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0 0 12px; }
+.sub-pick { position: relative; overflow: hidden; }
+.sub-pick input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.sub-pick.is-busy { opacity: 0.6; pointer-events: none; }
+.sub-mine { margin-top: 14px; }
+.sub-mine-title { font-size: 12px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+.sub-mine .sub-row { margin-bottom: 6px; }
+.sub-collect-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  margin: 4px 0 8px;
+}
+.sub-collect-title {
+  display: inline-flex; gap: 7px; align-items: center;
+  font-size: 13px; font-weight: 800; color: var(--green);
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.sub-locked {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 12.5px; color: var(--yellow);
+  background: rgba(229, 193, 0, 0.08);
+  border: 1px solid rgba(229, 193, 0, 0.3);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+/* ---------- Menu dots (droits) & envoi document ---------- */
+.dots-wrap { position: relative; display: inline-block; }
+.dots-btn {
+  width: 30px; height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--card-2);
+  color: var(--muted);
+  font-size: 17px; font-weight: 800; line-height: 1;
+  display: grid; place-items: center;
+  cursor: pointer;
+  padding: 0 0 2px;
+}
+.dots-btn.on, .dots-btn:hover { color: var(--primary); border-color: var(--primary); }
+.dots-backdrop { position: fixed; inset: 0; z-index: 90; }
+.dots-menu {
+  position: absolute;
+  right: 0; top: 36px;
+  z-index: 100;
+  min-width: 230px;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-3);
+  padding: 6px;
+}
+.dots-menu-title {
+  font-size: 11px; font-weight: 700;
+  color: var(--faint);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  padding: 6px 10px 8px;
+}
+.dots-item {
+  width: 100%;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: none; border: none;
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  padding: 9px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.dots-item:hover { background: var(--card-2); }
+.dots-item.on { color: var(--primary); }
+.sub-send {
+  background: var(--card-2);
+  border: 1px solid rgba(124, 185, 255, 0.35);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+}
+.sub-send-file { font-size: 13.5px; font-weight: 700; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+
+/* ---------- Bouton WhatsApp (récolte) ---------- */
+.wa-btn {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 214, 140, 0.45);
+  background: rgba(61, 214, 140, 0.12);
+  color: #3DD68C;
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.wa-btn:hover { background: rgba(61, 214, 140, 0.22); }
+.wa-btn.off {
+  border-color: var(--stroke);
+  background: var(--card-2);
+  color: var(--faint);
+  cursor: not-allowed;
+  opacity: 0.6;
+}

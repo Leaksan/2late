@@ -6,6 +6,61 @@ import { useNow } from '../hooks/useNow';
 import { NoteForm } from '../components/NoteForm';
 import { IconBook, IconCalendar, IconCheckCircle, IconChevronDown, IconClock, IconClose, IconFileText, IconLink, IconNote, IconPause, IconPin, IconVideo } from '../ui/Icons';
 
+type EvalState = 'none' | 'off' | 'upcoming' | 'open' | 'ended' | 'plain';
+
+function evalLinksOf(slot: ScheduleSlot): Array<{ group: string; url: string }> {
+  if (slot.evalLinks && slot.evalLinks.length > 0) return slot.evalLinks;
+  return slot.evalUrl ? [{ group: '', url: slot.evalUrl }] : [];
+}
+
+// 'plain' = éval sans chrono configuré (comportement historique).
+function evalStateOf(slot: ScheduleSlot, now: number): EvalState {
+  if (evalLinksOf(slot).length === 0) return 'none';
+  if (slot.evalPostponed || !(slot.evalOpen ?? true)) return 'off';
+  if (!slot.evalStartsAt || !slot.evalMinutes) return 'plain';
+  const start = Date.parse(slot.evalStartsAt);
+  const end = start + slot.evalMinutes * 60_000;
+  if (now < start) return 'upcoming';
+  if (now < end) return 'open';
+  return 'ended';
+}
+
+function evalEndsAt(slot: ScheduleSlot): number {
+  return Date.parse(slot.evalStartsAt!) + (slot.evalMinutes ?? 0) * 60_000;
+}
+
+function evalCountdownLabel(endsAt: number, now: number): string {
+  const s = Math.max(0, Math.floor((endsAt - now) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(sec).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+function EvalGroupModal({ links, onClose }: { links: Array<{ group: string; url: string }>; onClose: () => void }) {
+  return (
+    <div className="modal-overlay" style={{ zIndex: 150 }} onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Choisir mon groupe">
+        <div className="modal-handle" />
+        <div className="modal-title">
+          Votre groupe d’évaluation
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
+        </div>
+        <p className="hint" style={{ marginBottom: 12 }}>Choisissez le lien correspondant à votre groupe de TD.</p>
+        {links.map((l, i) => (
+          <div className="row" style={{ marginBottom: 8 }} key={`${l.group}-${i}`}>
+            <button className="btn btn-primary grow" onClick={() => { window.open(l.url, '_blank', 'noopener'); onClose(); }}>
+              {l.group || `Groupe ${i + 1}`}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ScheduleScreen() {
   const { db, user, upsertScheduleSlot, deleteScheduleSlot, upsertCourseNote, deleteCourseNote } = useStore();
   const [formOpen, setFormOpen] = useState(false);
@@ -278,12 +333,22 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
   onPostpone: (slot: ScheduleSlot, what: 'course' | 'eval', reason?: string) => void;
   onNote: () => void;
 }) {
+  const [evalChooser, setEvalChooser] = useState(false);
+  const now = Date.now();
   const visioOn = !!slot.visioUrl && (slot.visioOpen ?? true) && !slot.coursePostponed;
-  const evalOn = !!slot.evalUrl && (slot.evalOpen ?? true) && !slot.evalPostponed;
+  const evalOn = !!(slot.evalUrl || slot.evalLinks?.length) && (slot.evalOpen ?? true) && !slot.evalPostponed;
+  const eState = evalStateOf(slot, now);
   const both = slot.coursePostponed && slot.evalPostponed;
+
+  const openEval = () => {
+    const links = evalLinksOf(slot);
+    if (links.length <= 1) window.open(links[0]?.url, '_blank', 'noopener');
+    else setEvalChooser(true);
+  };
 
   return (
     <div className={cx('slot-card', flash && 'flash', (slot.coursePostponed || slot.evalPostponed) && 'postponed')} role="button" tabIndex={0} onClick={onOpen} onKeyDown={e => { if (e.key === 'Enter') onOpen(); }}>
+      {evalChooser && <EvalGroupModal links={evalLinksOf(slot)} onClose={() => setEvalChooser(false)} />}
       <div className="slot-time">
         {both && <span className="pp-badge">TOUT REPORTÉ</span>}
         {slot.coursePostponed && !slot.evalPostponed && <span className="pp-badge">COURS REPORTÉ</span>}
@@ -320,7 +385,7 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
                     <IconVideo size={14} /> Visio {visioOn ? '· ouverte' : '· fermée'}
                   </button>
                 )}
-                {slot.evalUrl && !slot.evalPostponed && (
+                {(slot.evalUrl || slot.evalLinks?.length) && !slot.evalPostponed && (
                   <button className={cx('btn btn-ghost btn-sm eval', evalOn ? 'eval-on' : '')} onClick={() => onToggle(slot, 'evalOpen')}>
                     <IconLink size={14} /> Éval {evalOn ? '· ouverte' : '· fermée'}
                   </button>
@@ -333,9 +398,24 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
                     <IconVideo size={14} /> Visio
                   </button>
                 )}
-                {evalOn && (
-                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={() => window.open(slot.evalUrl, '_blank', 'noopener')}>
-                    <IconLink size={14} /> Évaluation
+                {eState === 'open' && (
+                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
+                    <IconLink size={14} /> Éval · <span className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</span>
+                  </button>
+                )}
+                {eState === 'plain' && evalOn && (
+                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
+                    <IconLink size={14} /> Évaluation{evalLinksOf(slot).length > 1 ? ` · ${evalLinksOf(slot).length} grp` : ''}
+                  </button>
+                )}
+                {eState === 'upcoming' && (
+                  <button className="btn btn-ghost btn-sm eval eval-wait" disabled title="L'évaluation n'est pas encore ouverte">
+                    <IconClock size={14} /> Éval · ouvre à {new Date(slot.evalStartsAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </button>
+                )}
+                {eState === 'ended' && (
+                  <button className="btn btn-ghost btn-sm eval eval-ended" disabled title="Le temps de l'évaluation est écoulé">
+                    <IconClock size={14} /> Éval terminée
                   </button>
                 )}
               </>
@@ -356,7 +436,7 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
                 <IconPause size={14} /> Reporter le cours
               </button>
             )}
-            {slot.evalUrl && !slot.coursePostponed && (
+            {(slot.evalUrl || slot.evalLinks?.length) && !slot.coursePostponed && (
               slot.evalPostponed ? (
                 <button className="btn btn-ghost btn-sm pp-btn" onClick={() => onPostpone(slot, 'eval')}>
                   Rétablir l’éval.
@@ -388,8 +468,24 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
   const [confirmDel, setConfirmDel] = useState(false);
   const [ppWhat, setPpWhat] = useState<'course' | 'eval' | null>(null);
   const [ppReason, setPpReason] = useState('');
+  const [evalChooser, setEvalChooser] = useState(false);
+  const now = Date.now();
   const visioOn = !!slot.visioUrl && (slot.visioOpen ?? true) && !slot.coursePostponed;
-  const evalOn = !!slot.evalUrl && (slot.evalOpen ?? true) && !slot.evalPostponed;
+  const evalOn = !!(slot.evalUrl || slot.evalLinks?.length) && (slot.evalOpen ?? true) && !slot.evalPostponed;
+  const eState = evalStateOf(slot, now);
+  const evalLinks = evalLinksOf(slot);
+
+  const openEval = () => {
+    if (evalLinks.length <= 1) window.open(evalLinks[0]?.url, '_blank', 'noopener');
+    else setEvalChooser(true);
+  };
+
+  const evalWindowLabel = () => {
+    if (!slot.evalStartsAt || !slot.evalMinutes) return null;
+    const start = new Date(slot.evalStartsAt);
+    const end = new Date(evalEndsAt(slot));
+    return `Fenêtre : ${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} → ${end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} (${slot.evalMinutes} min)`;
+  };
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -441,11 +537,33 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
             </button>
           </div>
         )}
-        {evalOn && (
-          <div className="row" style={{ marginBottom: 14 }}>
-            <button className="btn btn-ghost grow eval eval-on" onClick={() => window.open(slot.evalUrl, '_blank', 'noopener')}>
-              <IconLink size={16} /> Accéder à l’évaluation
-            </button>
+        {evalChooser && <EvalGroupModal links={evalLinks} onClose={() => setEvalChooser(false)} />}
+        {(eState === 'open' || eState === 'plain') && (
+          <div style={{ marginBottom: 14 }}>
+            {eState === 'open' && (
+              <p className="hint row" style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                <IconClock size={14} />
+                <span>Évaluation en cours — fermeture dans <b className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</b>. Passe ce délai, le lien sera désactivé.</span>
+              </p>
+            )}
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button className="btn btn-ghost grow eval eval-on" onClick={openEval}>
+                <IconLink size={16} /> Accéder à l’évaluation{evalLinks.length > 1 ? ` · ${evalLinks.length} groupes` : ''}
+              </button>
+            </div>
+            {evalWindowLabel() && <p className="hint">{evalWindowLabel()}</p>}
+          </div>
+        )}
+        {eState === 'upcoming' && (
+          <div className="pp-banner" style={{ marginBottom: 14 }}>
+            <IconClock size={16} />
+            <span><b>Évaluation à venir</b> — ouverture {new Date(slot.evalStartsAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à {new Date(slot.evalStartsAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} ({slot.evalMinutes} min). Le lien sera actif uniquement pendant la fenêtre.</span>
+          </div>
+        )}
+        {eState === 'ended' && (
+          <div className="pp-banner" style={{ marginBottom: 14 }}>
+            <IconClock size={16} />
+            <span><b>Évaluation terminée</b> — le temps imparti est écoulé, le lien n’est plus accessible.</span>
           </div>
         )}
 
@@ -474,7 +592,7 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
                 >
                   {slot.coursePostponed ? 'Rétablir le cours' : <><IconPause size={15} /> Reporter le cours</>}
                 </button>
-                {slot.evalUrl && !slot.coursePostponed && (
+                {(slot.evalUrl || slot.evalLinks?.length) && !slot.coursePostponed && (
                   <button
                     className={cx('btn btn-ghost grow', slot.evalPostponed && 'pp-btn')}
                     onClick={() => (slot.evalPostponed ? onPostpone(slot, 'eval') : (setPpWhat('eval'), setPpReason('')))}
@@ -492,7 +610,7 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
                     <IconVideo size={15} /> Visio : {visioOn ? 'ouverte' : 'fermée'}
                   </button>
                 )}
-                {slot.evalUrl && !slot.evalPostponed && (
+                {(slot.evalUrl || slot.evalLinks?.length) && !slot.evalPostponed && (
                   <button className={cx('btn btn-ghost grow eval', evalOn ? 'eval-on' : '')} onClick={() => onToggle(slot, 'evalOpen')}>
                     <IconLink size={15} /> Éval : {evalOn ? 'ouverte' : 'fermée'}
                   </button>
@@ -585,6 +703,13 @@ function NotesListModal({ notes, onClose, onEdit, onToggleDone, onDelete }: {
   );
 }
 
+function toLocalDT(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
   slot: ScheduleSlot | null;
   subjects: Subject[];
@@ -601,6 +726,10 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
   const [room, setRoom] = useState(slot?.room ?? '');
   const [visioUrl, setVisioUrl] = useState(slot?.visioUrl ?? '');
   const [evalUrl, setEvalUrl] = useState(slot?.evalUrl ?? '');
+  const [evalGroups, setEvalGroups] = useState<Array<{ group: string; url: string }>>(slot?.evalLinks ?? []);
+  const [timed, setTimed] = useState(!!slot?.evalStartsAt);
+  const [evalDate, setEvalDate] = useState(toLocalDT(slot?.evalStartsAt));
+  const [evalMinutes, setEvalMinutes] = useState(String(slot?.evalMinutes ?? 60));
   const [visioOpen, setVisioOpen] = useState(slot?.visioOpen ?? true);
   const [evalOpen, setEvalOpen] = useState(slot?.evalOpen ?? true);
   const [note, setNote] = useState(slot?.note ?? '');
@@ -608,6 +737,10 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
 
   const poleSubjects = subjects.filter(s => s.pole === pole);
   const known = poleSubjects.find(s => s.discipline === discipline);
+
+  const setGroup = (i: number, patch: Partial<{ group: string; url: string }>) => {
+    setEvalGroups(prev => prev.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
+  };
 
   const pickSubject = (id: string) => {
     const s = poleSubjects.find(x => x.id === id);
@@ -628,6 +761,19 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
     if (!teacherName.trim()) return setError('Le nom de l’enseignant est obligatoire.');
     if (!start || !end) return setError('Horaires incomplets.');
     if (end <= start) return setError('L’heure de fin doit être après l’heure de début.');
+    const cleanGroups = evalGroups
+      .filter(g => g.url.trim())
+      .map((g, i) => ({ group: g.group.trim() || `Groupe ${i + 1}`, url: g.url.trim() }));
+    if (cleanGroups.some(g => !/^https?:\/\/.+/.test(g.url))) return setError('Liens d’évaluation par groupe invalides (http/https requis).');
+    let evalStartsAt: string | null = null;
+    let evalMinutes: number | undefined;
+    if (timed) {
+      if (!evalDate) return setError('Indiquez la date et l’heure d’ouverture de l’évaluation.');
+      const mins = Number(evalMinutes);
+      if (!Number.isFinite(mins) || mins < 1 || mins > 600) return setError('Durée d’évaluation invalide : entre 1 et 600 minutes.');
+      evalStartsAt = new Date(evalDate).toISOString();
+      evalMinutes = mins;
+    }
     onSave({
       id: slot?.id ?? uid('s'),
       pole,
@@ -639,6 +785,9 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
       room: room.trim() || undefined,
       visioUrl: visioUrl.trim() || undefined,
       evalUrl: evalUrl.trim() || undefined,
+      evalLinks: cleanGroups.length > 0 ? cleanGroups : undefined,
+      evalStartsAt,
+      evalMinutes,
       visioOpen,
       evalOpen,
       note: note.trim() || undefined,
@@ -727,6 +876,62 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
                 <input type="checkbox" checked={evalOpen} onChange={e => setEvalOpen(e.target.checked)} />
                 Évaluation ouverte aux étudiants
               </label>
+            </div>
+
+            <div className="field">
+              <label>Liens par groupe (optionnel)</label>
+              {evalGroups.map((g, i) => (
+                <div className="link-row" key={i}>
+                  <input
+                    className="input"
+                    style={{ maxWidth: 120 }}
+                    value={g.group}
+                    onChange={e => setGroup(i, { group: e.target.value })}
+                    placeholder={`Groupe ${i + 1}`}
+                  />
+                  <input
+                    className="input"
+                    type="url"
+                    value={g.url}
+                    onChange={e => setGroup(i, { url: e.target.value })}
+                    placeholder="https://moodle.univ.ga/…"
+                  />
+                  <button
+                    type="button"
+                    className="modal-close"
+                    aria-label="Retirer le lien"
+                    onClick={() => setEvalGroups(prev => prev.filter((_, idx) => idx !== i))}
+                  >
+                    <IconClose size={14} />
+                  </button>
+                </div>
+              ))}
+              <div className="chips">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEvalGroups(prev => [...prev, { group: `Groupe ${prev.length + 1}`, url: '' }])}>
+                  + Ajouter un groupe
+                </button>
+              </div>
+              <p className="hint">Un lien par groupe de TD : les étudiants choisissent leur groupe au moment de l’éval. Si aucun groupe n’est défini, le lien unique ci-dessus est utilisé.</p>
+            </div>
+
+            <div className="field">
+              <label className="hint check-row">
+                <input type="checkbox" checked={timed} onChange={e => { setTimed(e.target.checked); if (!e.target.checked) { setEvalDate(''); setEvalMinutes('60'); } }} />
+                Évaluation chronométrée (durée limitée)
+              </label>
+              {timed && (
+                <div className="row" style={{ marginTop: 8 }}>
+                  <div className="field grow">
+                    <label>Ouverture *</label>
+                    <input className="input" type="datetime-local" value={evalDate} onChange={e => setEvalDate(e.target.value)} />
+                  </div>
+                  <div className="field" style={{ width: 110 }}>
+                    <label>Durée (min)</label>
+                    <input className="input" type="number" min={1} max={600} value={evalMinutes} onChange={e => setEvalMinutes(e.target.value)} />
+                  </div>
+                </div>
+              )}
+              {timed && <p className="hint">Avant l’ouverture le lien est désactivé (« ouvre à HH:MM »), pendant il affiche un compte à rebours, après il devient inaccessible.</p>}
             </div>
 
             <div className="field">
