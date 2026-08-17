@@ -13,10 +13,10 @@ function InstallCard() {
   return (
     <>
       <div className="list-row">
-        <div className="list-ico">⬇️</div>
+        <div className="list-ico"><IconDownload size={19} /></div>
         <div className="grow">
           <div className="list-label">
-            Installer 2late {isInstalled && <span className="install-ok">✅ installée</span>}
+            Installer 2late {isInstalled && <span className="install-ok"><IconCheckCircle size={13} /> installée</span>}
           </div>
           <div className="list-sub">
             {isInstalled
@@ -46,7 +46,7 @@ function InstallCard() {
             <div className="modal-handle" />
             <div className="modal-title">
               Installer l’application
-              <button className="modal-close" onClick={() => setShowSteps(false)} aria-label="Fermer">✖️</button>
+              <button className="modal-close" onClick={() => setShowSteps(false)} aria-label="Fermer"><IconClose size={15} /></button>
             </div>
 
             <div className="install-os">
@@ -133,7 +133,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
 
       <div className="list-card" style={{ marginBottom: 14 }}>
         <div className="list-row" style={{ alignItems: 'flex-start' }}>
-          <div className="list-ico" style={{ marginTop: 2 }}>💬</div>
+          <div className="list-ico" style={{ marginTop: 2 }}><IconWhatsapp size={19} /></div>
           <div className="grow">
             <div className="list-label">Mon numéro WhatsApp</div>
             <input
@@ -164,7 +164,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
       <h2 className="section-title">Résultats</h2>
       <div className="list-card">
         <div className="list-row">
-          <div className="list-ico">🎓</div>
+          <div className="list-ico"><IconGraduation size={19} /></div>
           <div className="grow">
             <div className="list-label">Mes notes &amp; moyenne</div>
             <div className="list-sub">
@@ -183,7 +183,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
           {myApplication ? (
             <div className="list-card">
               <div className="list-row">
-                <div className="list-ico">📣</div>
+                <div className="list-ico"><IconMegaphone size={19} /></div>
                 <div className="grow">
                   <div className="list-label">Candidature envoyée</div>
                   <div className="list-sub">En attente de validation par l’administration.</div>
@@ -193,7 +193,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
           ) : isRelais ? null : (
             <div className="list-card">
               <div className="list-row">
-                <div className="list-ico">📣</div>
+                <div className="list-ico"><IconMegaphone size={19} /></div>
                 <div className="grow">
                   <div className="list-label">Devenir Relais</div>
                   <div className="list-sub">Relayer les infos utiles de votre pôle, notées par la communauté.</div>
@@ -261,7 +261,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
       <div className="list-card">
         <InstallCard />
         <div className="list-row">
-          <div className="list-ico">👤</div>
+          <div className="list-ico"><IconUser size={19} /></div>
           <div className="grow">
             <div className="list-label">{db.users.length} comptes · {db.announcements.length} annonces</div>
             <div className="list-sub">Données de démonstration stockées localement sur cet appareil.</div>
@@ -288,7 +288,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
       <h2 className="section-title">Session</h2>
       <div className="list-card">
         <div className="list-row">
-          <div className="list-ico">🚪</div>
+          <div className="list-ico"><IconLogout size={19} /></div>
           <div className="grow">
             <div className="list-label">Se déconnecter</div>
             <div className="list-sub">Vous revenez à l’écran de connexion.</div>

@@ -11,7 +11,7 @@ export function TimeChip({ iso, seconds = false, className }: { iso: string; sec
   const day = sameDay ? "auj." : yesterday ? 'hier' : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   return (
     <span className={cx('time-chip', className)} title={d.toLocaleString('fr-FR')}>
-      🕒
+      <IconClock size={12} />
       <b>{time}</b>
       <span className="time-chip-day">{day}</span>
     </span>

@@ -52,7 +52,7 @@ export function ResetPasswordScreen({ token, onExit }: { token: string; onExit: 
         {mode === 'success' && (
           <>
             <p className="comment-body row" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', textAlign: 'left', color: 'var(--green)' }}>
-              <span style={{ flex: 'none', marginTop: 2 }}>✅</span>
+              <span style={{ flex: 'none', marginTop: 2 }}><IconCheckCircle size={17} /></span>
               <span>Votre mot de passe a été modifié avec succès.</span>
             </p>
             <p className="hint" style={{ textAlign: 'center' }}>

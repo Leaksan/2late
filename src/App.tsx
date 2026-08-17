@@ -187,7 +187,7 @@ export default function App() {
             className={cx('bottomnav-item', view.name === 'feed' && 'active')}
             onClick={() => go('feed')}
           >
-            <span className="nav-emoji">🔔</span>
+            <IconBell size={22} />
             À lire
             {unreadCount > 0 && view.name !== 'feed' && <span className="bottomnav-badge">{unreadCount}</span>}
           </button>
@@ -197,7 +197,7 @@ export default function App() {
               className={cx('bottomnav-item', view.name === 'admin' && 'active')}
               onClick={() => go('admin')}
             >
-              <span className="nav-emoji">📊</span>
+              <IconGauge size={22} />
               Admin
               {pendingApps > 0 && view.name !== 'admin' && <span className="bottomnav-badge">{pendingApps}</span>}
             </button>
@@ -207,7 +207,7 @@ export default function App() {
             className={cx('bottomnav-item', tab === 'rooms' && 'active')}
             onClick={() => go('rooms')}
           >
-            <span className="nav-emoji">💬</span>
+            <IconChat size={22} />
             Salons
             {mentioned && tab !== 'rooms' ? (
               <span className="bottomnav-badge at" title="Vous avez été identifié">@</span>
@@ -220,7 +220,7 @@ export default function App() {
             className={cx('bottomnav-item', view.name === 'schedule' && 'active')}
             onClick={() => go('schedule')}
           >
-            <span className="nav-emoji">📅</span>
+            <IconCalendar size={22} />
             Planning
           </button>
 
@@ -228,7 +228,7 @@ export default function App() {
             className={cx('bottomnav-item', view.name === 'syllabus' && 'active')}
             onClick={() => go('syllabus')}
           >
-            <span className="nav-emoji">📚</span>
+            <IconBook size={22} />
             Syllabus
           </button>
 
@@ -236,7 +236,7 @@ export default function App() {
             className={cx('bottomnav-item', view.name === 'profile' && 'active')}
             onClick={() => go('profile')}
           >
-            <span className="nav-emoji">👤</span>
+            <IconUser size={22} />
             Profil
           </button>
         </div>

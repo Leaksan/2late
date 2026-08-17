@@ -40,7 +40,7 @@ function AddGradeModal({ onClose }: { onClose: () => void }) {
         <div className="modal-handle" />
         <div className="modal-title">
           Ajouter une note
-          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={15} /></button>
         </div>
         <form onSubmit={submit}>
           <div className="field">
@@ -131,7 +131,7 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="screen" style={{ paddingTop: 12 }}>
       <button className="topbar-back" onClick={onBack} style={{ marginBottom: 14 }} aria-label="Retour">
-        ←
+        <IconChevronLeft size={20} />
       </button>
 
       <div className={cx('grade-hero', globalAvg != null && globalAvg < 10 && 'low')}>
@@ -162,14 +162,14 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
 
       {myGrades.length === 0 && (
         <div className="empty">
-          <div className="empty-ico">🎓</div>
+          <div className="empty-ico"><IconGraduation size={26} /></div>
           <b>Aucune note enregistrée</b>
           <p>Ajoutez vos notes reçues aux devoirs et contrôles : la moyenne se calcule automatiquement.</p>
         </div>
       )}
 
       <button className="fab" onClick={() => setModal(true)} aria-label="Ajouter une note">
-        ➕
+        <IconPlus size={26} />
       </button>
 
       {modal && <AddGradeModal onClose={() => setModal(false)} />}

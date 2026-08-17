@@ -130,10 +130,10 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
     return (
       <div className="screen" style={{ paddingTop: 12 }}>
         <button className="topbar-back" onClick={onBack} style={{ marginBottom: 14 }} aria-label="Retour">
-          ←
+          <IconChevronLeft size={20} />
         </button>
         <div className="empty">
-          <div className="empty-ico">🔒</div>
+          <div className="empty-ico"><IconLock size={24} /></div>
           <b>Accès révoqué</b>
           <p>Votre accès à ce salon a été révoqué. Contactez l’administration ou votre relais de pôle.</p>
         </div>
@@ -145,7 +145,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
     <div className="chat-wrap">
       <header className="chat-header">
         <button className="topbar-back" onClick={onBack} aria-label="Retour">
-          ←
+          <IconChevronLeft size={20} />
         </button>
         <span className="room-emoji" style={{ width: 38, height: 38 }}><RoomIcon room={room} size={19} /></span>
         <div className="grow" style={{ minWidth: 0 }}>
@@ -153,7 +153,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
           <div className="chat-room-sub">{participants.length} membres</div>
         </div>
         <button className="topbar-back" onClick={() => setMembersOpen(true)} aria-label="Membres">
-          👥
+          <IconUsers size={19} />
         </button>
       </header>
 
@@ -180,7 +180,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
         ))}
         {messages.length === 0 && (
           <div className="empty" style={{ padding: '40px 24px' }}>
-            <div className="empty-ico">💬</div>
+            <div className="empty-ico"><IconChat size={24} /></div>
             <b>Premier message</b>
             <p>Lancez la discussion dans « {room.name} » !</p>
           </div>
@@ -200,7 +200,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
               <div className="chat-reply-snippet">{replyTo.deleted ? 'Message supprimé' : replyTo.body}</div>
             </div>
             <button className="modal-close" onClick={() => setReplyTo(null)} aria-label="Annuler la réponse">
-              ✖️
+              <IconClose size={14} />
             </button>
           </div>
         )}
@@ -228,7 +228,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
             aria-label="Message"
           />
           <button className="send-btn" onClick={send} disabled={!body.trim()} aria-label="Envoyer">
-            📤
+            <IconSend size={19} />
           </button>
         </div>
       </footer>
@@ -320,7 +320,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setProfileUser(null); }}>
           <div className="modal profile-modal" role="dialog" aria-modal="true" aria-label="Profil">
             <div className="modal-handle" />
-            <button className="modal-close profile-close" onClick={() => setProfileUser(null)} aria-label="Fermer">✖️</button>
+            <button className="modal-close profile-close" onClick={() => setProfileUser(null)} aria-label="Fermer"><IconClose size={16} /></button>
             <div className="profile-hero">
               <div className="profile-big-avatar">{initials(profileUser.name)}</div>
               <div className="profile-hero-name">{profileUser.name}</div>
@@ -373,7 +373,7 @@ export function ChatRoomScreen({ roomId, onBack }: Props) {
             <div className="modal-handle" />
             <div className="modal-title">
               <span className="row" style={{ gap: 8 }}><RoomIcon room={room} size={17} /> {room.name} — {participants.length} membres</span>
-              <button className="modal-close" onClick={() => setMembersOpen(false)} aria-label="Fermer">✖️</button>
+              <button className="modal-close" onClick={() => setMembersOpen(false)} aria-label="Fermer"><IconClose size={16} /></button>
             </div>
             <div className="row" style={{ marginBottom: 10 }}>
               <button className="btn btn-primary btn-sm grow" onClick={mentionAll}>
@@ -579,7 +579,7 @@ function MessageBubble({
       <div className="swipe-track" style={{ transform: `translateX(${drag}px)`, transition: drag === 0 ? 'transform 220ms cubic-bezier(0.2,0.8,0.2,1)' : 'none' }}>
         {swipeHint && (
           <div className={cx('swipe-hint', mine ? 'left' : 'right')}>
-            ↩️
+            <IconReply size={17} />
           </div>
         )}
         <div

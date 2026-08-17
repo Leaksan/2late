@@ -36,16 +36,16 @@ export function FeedScreen({ onOpen, onPublish }: { onOpen: (id: string) => void
     <>
       <div className="tabs">
         <button className={cx('tab', tab === 'toRead' && 'active')} onClick={() => setTab('toRead')}>
-          🔔 À lire <span className="tab-count">{toRead.length}</span>
+          <IconBell size={15} /> À lire <span className="tab-count">{toRead.length}</span>
         </button>
         <button className={cx('tab', tab === 'seen' && 'active')} onClick={() => setTab('seen')}>
-          👁️ Vu récemment <span className="tab-count">{seen.length}</span>
+          <IconEye size={15} /> Vu récemment <span className="tab-count">{seen.length}</span>
         </button>
       </div>
 
       {nbUrgent > 0 && tab === 'toRead' && (
         <div className="pill-info row" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 14 }}>
-          <span style={{ flex: 'none', marginTop: 2, color: 'var(--red)' }}>⚠️</span>
+          <span style={{ flex: 'none', marginTop: 2, color: 'var(--red)' }}><IconAlertCircle size={15} /></span>
           <span><b style={{ color: 'var(--red)' }}>{nbUrgent}</b> annonce{nbUrgent > 1 ? 's' : ''} urgente{nbUrgent > 1 ? 's' : ''} non lue{nbUrgent > 1 ? 's' : ''} — elles apparaissent en tête de liste.</span>
         </div>
       )}
@@ -64,7 +64,7 @@ export function FeedScreen({ onOpen, onPublish }: { onOpen: (id: string) => void
                 onKeyDown={e => { if (e.key === 'Enter') setEditing({ note, slot }); }}
               >
                 <div className="reminder-head">
-                  <span className="reminder-kicker">🕒 Rappel · note perso</span>
+                  <span className="reminder-kicker"><IconClock size={13} /> Rappel · note perso</span>
                   <span className={cx('reminder-timer', cd.late && 'late')}>
                     {cd.late ? 'dépassé' : cd.text}
                   </span>
@@ -86,7 +86,7 @@ export function FeedScreen({ onOpen, onPublish }: { onOpen: (id: string) => void
 
       {list.length === 0 && reminders.length === 0 && (
         <div className="empty">
-          <div className="empty-ico">{tab === 'toRead' ? '🔔' : '👁️'}</div>
+          <div className="empty-ico">{tab === 'toRead' ? <IconBell size={26} /> : <IconEye size={26} />}</div>
           {tab === 'toRead' ? (
             hasAny ? (
               <>
@@ -120,7 +120,7 @@ export function FeedScreen({ onOpen, onPublish }: { onOpen: (id: string) => void
 
       {canPublish && (
         <button className="fab" onClick={onPublish} aria-label="Publier une annonce">
-          ➕
+          <IconPlus size={26} />
         </button>
       )}
     </>

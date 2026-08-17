@@ -23,7 +23,7 @@ export function RoomsScreen({ onOpen }: { onOpen: (roomId: string) => void }) {
 
       {rooms.length <= 1 && (
         <div className="empty">
-          <div className="empty-ico">💬</div>
+          <div className="empty-ico"><IconChat size={26} /></div>
           <b>Un seul salon pour l’instant</b>
           <p>
             Vous avez accès au salon de votre pôle. L’administration peut vous ouvrir d’autres salons

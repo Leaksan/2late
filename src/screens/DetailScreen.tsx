@@ -36,7 +36,7 @@ function AccessDots({ access, onChange }: { access: CollectAccess; onChange: (a:
                 onClick={() => { onChange(a); setOpen(false); }}
               >
                 <span>{COLLECT_ACCESS_LABELS[a]}</span>
-                {access === a && '✅'}
+                {access === a && <IconCheckCircle size={15} />}
               </button>
             ))}
           </div>
@@ -156,7 +156,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
   return (
     <div className="part-panel">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <b style={{ fontSize: 15 }}>📄 Collecte de documents</b>
+        <b style={{ fontSize: 15 }}><IconFileText size={16} /> Collecte de documents</b>
         {subs.length > 0 && (
           <span className="badge badge-type">{nbStudents} étudiant{nbStudents > 1 ? 's' : ''} · {subs.length} document{subs.length > 1 ? 's' : ''}</span>
         )}
@@ -164,7 +164,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
 
       {canSubmit && (
         <div className="sub-dropzone">
-          <div className="sub-dropzone-title">📄 Déposer mon document</div>
+          <div className="sub-dropzone-title"><IconFileText size={17} /> Déposer mon document</div>
           <p className="sub-dropzone-hint">
             Sélectionnez votre fichier (PDF, image, document — 20 Mo max) : il est transmis directement, classé à votre nom avec l’heure d’envoi. Plus besoin de WhatsApp.
           </p>
@@ -180,13 +180,13 @@ function ParticipativePanel({ annId }: { annId: string }) {
           ) : (
             <div className="sub-send">
               <div className="sub-send-file">
-                📄 {pending.name}
+                <IconFileText size={15} /> {pending.name}
                 <span className="sub-time"> · {formatSize(pending.size)}</span>
               </div>
               <div className="row" style={{ marginTop: 10 }}>
                 <button className="btn btn-ghost grow" onClick={() => setPending(null)} disabled={busy}>Annuler</button>
                 <button className="btn btn-primary grow" onClick={() => void send()} disabled={busy}>
-                  📤 {busy ? 'Envoi…' : 'Envoyer'}
+                  <IconSend size={16} /> {busy ? 'Envoi…' : 'Envoyer'}
                 </button>
               </div>
             </div>
@@ -194,7 +194,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
           {error && <p className="error-text" style={{ marginTop: 8 }}>{error}</p>}
           {sentTo && (
             <div className="sub-sent-ok">
-              ✅
+              <IconCheckCircle size={14} />
               <span>Document envoyé ✓ — une copie est transmise automatiquement à <b>{sentTo}</b>.</span>
             </div>
           )}
@@ -204,7 +204,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
               <div className="sub-mine-title">Mes dépôts ({mine.length})</div>
               {mine.map(s => (
                 <div className="sub-row own" key={s.id}>
-                  <span className="sub-file">📄 {s.fileName}</span>
+                  <span className="sub-file"><IconFileText size={14} /> {s.fileName}</span>
                   <span className="sub-time">envoyé <TimeChip iso={s.createdAt} seconds /> · {formatSize(s.fileSize)}</span>
                   <div className="list-actions">
                     <button className="text-btn primary" onClick={() => void downloadSubmission(s)}>Télécharger</button>
@@ -228,12 +228,12 @@ function ParticipativePanel({ annId }: { annId: string }) {
       {canCollect && (
         <div className="sub-collect">
           <div className="sub-collect-head">
-            <span className="sub-collect-title">⬇️ Récupérer les devoirs</span>
+            <span className="sub-collect-title"><IconDownload size={16} /> Récupérer les devoirs</span>
             <span className="row" style={{ gap: 8 }}>
               {canManageAccess && <AccessDots access={access} onChange={a => setCollectAccess(annId, a)} />}
               {canDownload && subs.length > 0 && (
                 <button className="btn btn-ghost btn-sm" onClick={() => void downloadAll(subs)}>
-                  ⬇️ Tout télécharger
+                  <IconDownload size={14} /> Tout télécharger
                 </button>
               )}
             </span>
@@ -244,14 +244,14 @@ function ParticipativePanel({ annId }: { annId: string }) {
           </p>
           {!canDownload && (
             <div className="sub-locked">
-              🔒
+              <IconLock size={14} />
               <span>Consultation seule : le téléchargement est réservé à « {COLLECT_ACCESS_LABELS[access]} ».</span>
             </div>
           )}
 
           <div className="collect-mail">
             <span className="collect-mail-state">
-              📤
+              <IconSend size={13} />
               {ann.collectEmail
                 ? <>Réception automatique : <b>{ann.collectEmail}</b></>
                 : 'Réception automatique : désactivée'}
@@ -312,11 +312,11 @@ function ParticipativePanel({ annId }: { annId: string }) {
                   aria-label={`Contacter ${student.name} sur WhatsApp`}
                   onClick={() => window.open(waLink(student.whatsapp!, waMessage(student.name, s.createdAt)), '_blank', 'noopener')}
                 >
-                  💬
+                  <IconWhatsapp size={16} />
                 </button>
               ) : (
                 <span className="wa-btn off" title="Numéro WhatsApp non renseigné par l’étudiant">
-                  💬
+                  <IconWhatsapp size={16} />
                 </span>
               )}
               {canDownload && (
@@ -363,7 +363,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
   return (
     <div className="screen" style={{ paddingTop: 12 }}>
       <button className="topbar-back" onClick={onBack} style={{ marginBottom: 14 }} aria-label="Retour">
-        ←
+        <IconChevronLeft size={20} />
       </button>
 
       <div className="detail-card">
@@ -380,7 +380,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
 
         {ann.expiresAt && (
           <p className="hint row" style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 12 }}>
-            🕒
+            <IconClock size={14} />
             {isExpired(ann) ? 'Cette annonce temporaire a expiré.' : `Annonce temporaire — ${timeLeft(ann.expiresAt)}.`}
           </p>
         )}
@@ -389,7 +389,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           <div className="row" style={{ flexWrap: 'wrap', marginTop: 14 }}>
             {ann.links.map(l => (
               <button key={l.id} className="btn btn-ghost btn-sm" style={{ display: 'inline-flex', gap: 6 }} onClick={() => window.open(l.url, '_blank', 'noopener')}>
-                🔗 {l.label}
+                <IconLink size={13} /> {l.label}
               </button>
             ))}
           </div>
@@ -432,10 +432,10 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           {canVote ? (
             <div className="vote-actions mt12">
               <button className={cx('vote-btn', myVote?.value === 1 && 'on-up')} onClick={() => vote(ann.id, 1)}>
-                👍 Fiable
+                <IconThumbUp size={16} /> Fiable
               </button>
               <button className={cx('vote-btn', myVote?.value === -1 && 'on-down')} onClick={() => vote(ann.id, -1)}>
-                👎 Contester
+                <IconThumbDown size={16} /> Contester
               </button>
             </div>
           ) : (
@@ -446,7 +446,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
 
       <div className="comments-section">
         <h2 className="comments-title">
-          💬 Discussion {comments.length > 0 && <span className="tab-count">{comments.length}</span>}
+          <IconChat size={17} /> Discussion {comments.length > 0 && <span className="tab-count">{comments.length}</span>}
         </h2>
 
         {comments.map(c => {
@@ -481,7 +481,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
             aria-label="Nouveau commentaire"
           />
           <button className="send-btn" onClick={send} disabled={!body.trim()} aria-label="Envoyer">
-            📤
+            <IconSend size={19} />
           </button>
         </div>
       </div>

@@ -46,7 +46,7 @@ function EvalGroupModal({ links, onClose }: { links: Array<{ group: string; url:
         <div className="modal-handle" />
         <div className="modal-title">
           Votre groupe d’évaluation
-          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
         </div>
         <p className="hint" style={{ marginBottom: 12 }}>Choisissez le lien correspondant à votre groupe de TD.</p>
         {links.map((l, i) => (
@@ -161,13 +161,13 @@ export function ScheduleScreen() {
 
       {myNotes.length > 0 && (
         <button className="btn btn-ghost btn-sm notes-toggle" onClick={() => setNotesListOpen(true)}>
-          📝 Mes notes · {myNotes.length}
+          <IconNote size={14} /> Mes notes · {myNotes.length}
         </button>
       )}
 
       {dueNotes.length > 0 && (
         <button className="due-summary" onClick={() => scrollToSlot(dueNotes[0].slotId)}>
-          <b>🕒 N’oublie pas — échéance dans moins de 48 h</b>
+          <b><IconClock size={15} /> N’oublie pas — échéance dans moins de 48 h</b>
           <div className="pp-summary-list">
             {dueNotes.slice(0, 3).map(n => {
               const s = slots.find(x => x.id === n.slotId);
@@ -185,7 +185,7 @@ export function ScheduleScreen() {
 
       {notesBanner.length > 0 && (
         <button className="note-summary" onClick={() => scrollToSlot(notesBanner[0].slotId)}>
-          <b>📝 {notesBanner.length} note{notesBanner.length > 1 ? 's' : ''} {notesToday.length > 0 ? 'pour aujourd’hui' : 'en attente'}</b>
+          <b><IconNote size={15} /> {notesBanner.length} note{notesBanner.length > 1 ? 's' : ''} {notesToday.length > 0 ? 'pour aujourd’hui' : 'en attente'}</b>
           <div className="pp-summary-list">
             {notesBanner.slice(0, 3).map(n => {
               const s = slots.find(x => x.id === n.slotId);
@@ -198,11 +198,11 @@ export function ScheduleScreen() {
 
       {postponedToday.length > 0 ? (
         <button className="pp-summary" onClick={() => scrollToSlot(postponedToday[0].id)}>
-          <b>⏸️ {postponedToday.length} report{postponedToday.length > 1 ? 's' : ''} aujourd’hui</b>
+          <b><IconPause size={15} /> {postponedToday.length} report{postponedToday.length > 1 ? 's' : ''} aujourd’hui</b>
           <div className="pp-summary-list">
             {postponedToday.slice(0, 3).map(s => (
               <span key={s.id} className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                {s.coursePostponed && s.evalPostponed ? '⏸️' : s.coursePostponed ? '📚' : '📄'}
+                {s.coursePostponed && s.evalPostponed ? <IconPause size={13} /> : s.coursePostponed ? <IconBook size={13} /> : <IconFileText size={13} />}
                 {s.discipline} ({s.start}){s.coursePostponed && !s.evalPostponed ? ' — cours' : ''}{!s.coursePostponed && s.evalPostponed ? ' — éval.' : ''}
               </span>
             ))}
@@ -211,7 +211,7 @@ export function ScheduleScreen() {
         </button>
       ) : postponedWeek.length > 0 ? (
         <button className="pp-summary mild" onClick={() => scrollToSlot(postponedWeek[0].id)}>
-          <b>⏸️ {postponedWeek.length} report{postponedWeek.length > 1 ? 's' : ''} cette semaine</b>
+          <b><IconPause size={15} /> {postponedWeek.length} report{postponedWeek.length > 1 ? 's' : ''} cette semaine</b>
           <div className="pp-summary-list">
             {postponedWeek.slice(0, 3).map(s => (
               <span key={s.id}>{DAY_LABELS[s.day]} · {s.discipline}</span>
@@ -228,13 +228,13 @@ export function ScheduleScreen() {
             <b>En cours · {liveSlot.discipline}</b>
             <div className="live-sub">{liveSlot.start}–{liveSlot.end} · {liveSlot.teacherName}{liveSlot.room ? ` · ${liveSlot.room}` : ''}</div>
           </div>
-          <span className="live-hint row" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>Voir ▾</span>
+          <span className="live-hint row" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>Voir <IconChevronDown size={13} /></span>
         </button>
       )}
 
       {!liveSlot && nextSlot && (
         <button className="pill-info next-pill" style={{ marginBottom: 14, width: '100%', textAlign: 'left' }} onClick={() => scrollToSlot(nextSlot.id)}>
-          ▾ Prochain cours : <b>{nextSlot.discipline}</b> — {DAY_LABELS[nextSlot.day]} {nextSlot.start}, {nextSlot.teacherName}.
+          <IconChevronDown size={14} /> Prochain cours : <b>{nextSlot.discipline}</b> — {DAY_LABELS[nextSlot.day]} {nextSlot.start}, {nextSlot.teacherName}.
         </button>
       )}
 
@@ -263,7 +263,7 @@ export function ScheduleScreen() {
 
       {grouped.length === 0 && (
         <div className="empty">
-          <div className="empty-ico">📅</div>
+          <div className="empty-ico"><IconCalendar size={26} /></div>
           <b>Aucun créneau</b>
           <p>{canManage ? 'Ajoutez les cours de la semaine avec le bouton « + ».' : 'Votre pôle n’a pas encore publié d’emploi du temps.'}</p>
         </div>
@@ -361,18 +361,18 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
         <div className="slot-sub">{slot.teacherName}{slot.room ? ` · ${slot.room}` : ''}</div>
         {(slot.coursePostponed || slot.evalPostponed) && (
           <div className="slot-note pp-note">
-            ⏸️
+            <IconPause size={14} />
             <span>{both ? 'Cours et évaluation reportés' : slot.coursePostponed ? 'Cours reporté' : 'Évaluation reportée'}{slot.postponedReason ? ` — ${slot.postponedReason}` : ''}</span>
           </div>
         )}
         {!slot.coursePostponed && slot.note && (
-          <div className="slot-note">📌<span>{slot.note}</span></div>
+          <div className="slot-note"><IconPin size={14} /><span>{slot.note}</span></div>
         )}
         {note && (
           <div className={cx('slot-note my-note', note.done && 'done')}>
-            {note.done ? '✅' : '📝'} <span>{note.body}</span>
+            {note.done ? <IconCheckCircle size={14} /> : <IconNote size={14} />} <span>{note.body}</span>
             {!note.done && note.dueAt && Date.now() <= Date.parse(note.dueAt) && Date.parse(note.dueAt) - Date.now() <= 48 * 3600_000 && (
-              <span className="due-inline row" style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>🕒 {countdown(note.dueAt).text}</span>
+              <span className="due-inline row" style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><IconClock size={13} /> {countdown(note.dueAt).text}</span>
             )}
           </div>
         )}
@@ -382,12 +382,12 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
               <>
                 {slot.visioUrl && (
                   <button className={cx('btn btn-ghost btn-sm', visioOn ? 'visio-on' : '')} onClick={() => onToggle(slot, 'visioOpen')}>
-                    🎥 Visio {visioOn ? '· ouverte' : '· fermée'}
+                    <IconVideo size={14} /> Visio {visioOn ? '· ouverte' : '· fermée'}
                   </button>
                 )}
                 {(slot.evalUrl || slot.evalLinks?.length) && !slot.evalPostponed && (
                   <button className={cx('btn btn-ghost btn-sm eval', evalOn ? 'eval-on' : '')} onClick={() => onToggle(slot, 'evalOpen')}>
-                    🔗 Éval {evalOn ? '· ouverte' : '· fermée'}
+                    <IconLink size={14} /> Éval {evalOn ? '· ouverte' : '· fermée'}
                   </button>
                 )}
               </>
@@ -395,33 +395,33 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
               <>
                 {visioOn && (
                   <button className="btn btn-ghost btn-sm visio-on" onClick={() => window.open(slot.visioUrl, '_blank', 'noopener')}>
-                    🎥 Visio
+                    <IconVideo size={14} /> Visio
                   </button>
                 )}
                 {eState === 'open' && (
                   <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
-                    🔗 Éval · <span className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</span>
+                    <IconLink size={14} /> Éval · <span className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</span>
                   </button>
                 )}
                 {eState === 'plain' && evalOn && (
                   <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
-                    🔗 Évaluation{evalLinksOf(slot).length > 1 ? ` · ${evalLinksOf(slot).length} grp` : ''}
+                    <IconLink size={14} /> Évaluation{evalLinksOf(slot).length > 1 ? ` · ${evalLinksOf(slot).length} grp` : ''}
                   </button>
                 )}
                 {eState === 'upcoming' && (
                   <button className="btn btn-ghost btn-sm eval eval-wait" disabled title="L'évaluation n'est pas encore ouverte">
-                    🕒 Éval · ouvre à {new Date(slot.evalStartsAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    <IconClock size={14} /> Éval · ouvre à {new Date(slot.evalStartsAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </button>
                 )}
                 {eState === 'ended' && (
                   <button className="btn btn-ghost btn-sm eval eval-ended" disabled title="Le temps de l'évaluation est écoulé">
-                    🕒 Éval terminée
+                    <IconClock size={14} /> Éval terminée
                   </button>
                 )}
               </>
             )}
             <button className="btn btn-ghost btn-sm note-btn" onClick={onNote}>
-              📝 {note ? 'Ma note' : 'Noter'}
+              <IconNote size={14} /> {note ? 'Ma note' : 'Noter'}
             </button>
           </div>
         )}
@@ -433,7 +433,7 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
               </button>
             ) : (
               <button className="btn btn-ghost btn-sm" onClick={() => onPostpone(slot, 'course')}>
-                ⏸️ Reporter le cours
+                <IconPause size={14} /> Reporter le cours
               </button>
             )}
             {(slot.evalUrl || slot.evalLinks?.length) && !slot.coursePostponed && (
@@ -443,7 +443,7 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
                 </button>
               ) : (
                 <button className="btn btn-ghost btn-sm" onClick={() => onPostpone(slot, 'eval')}>
-                  ⏸️ Reporter l’éval.
+                  <IconPause size={14} /> Reporter l’éval.
                 </button>
               )
             )}
@@ -493,12 +493,12 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
         <div className="modal-handle" />
         <div className="modal-title">
           {slot.discipline}
-          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
         </div>
 
         {(slot.coursePostponed || slot.evalPostponed) && (
           <div className="pp-banner">
-            ⏸️
+            <IconPause size={16} />
             <span><b>{slot.coursePostponed && slot.evalPostponed ? 'Cours et évaluation reportés' : slot.coursePostponed ? 'Cours reporté' : 'Évaluation reportée'}</b>
             {slot.postponedReason ? ` — ${slot.postponedReason}` : null}</span>
           </div>
@@ -515,25 +515,25 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
             </span>
           </div>
           {slot.note && (
-            <p className="detail-desc" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}><span style={{ flex: 'none', marginTop: 3 }}>📌</span><span>{slot.note}</span></p>
+            <p className="detail-desc" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}><span style={{ flex: 'none', marginTop: 3 }}><IconPin size={15} /></span><span>{slot.note}</span></p>
           )}
           {note && (
             <div className={cx('slot-note my-note', note.done && 'done')} style={{ marginTop: 10 }}>
-              {note.done ? '✅' : '📝'} <span>{note.body}</span>
+              {note.done ? <IconCheckCircle size={14} /> : <IconNote size={14} />} <span>{note.body}</span>
             </div>
           )}
         </div>
 
         <div className="row" style={{ marginBottom: 14 }}>
           <button className="btn btn-ghost grow note-btn" onClick={onNote}>
-            📝 {note ? 'Modifier ma note' : 'Ajouter une note perso'}
+            <IconNote size={15} /> {note ? 'Modifier ma note' : 'Ajouter une note perso'}
           </button>
         </div>
 
         {visioOn && (
           <div className="row" style={{ marginBottom: 10 }}>
             <button className="btn btn-primary grow" onClick={() => window.open(slot.visioUrl, '_blank', 'noopener')}>
-              🎥 Rejoindre la visio
+              <IconVideo size={16} /> Rejoindre la visio
             </button>
           </div>
         )}
@@ -542,13 +542,13 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
           <div style={{ marginBottom: 14 }}>
             {eState === 'open' && (
               <p className="hint row" style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-                🕒
+                <IconClock size={14} />
                 <span>Évaluation en cours — fermeture dans <b className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</b>. Passe ce délai, le lien sera désactivé.</span>
               </p>
             )}
             <div className="row" style={{ marginBottom: 8 }}>
               <button className="btn btn-ghost grow eval eval-on" onClick={openEval}>
-                🔗 Accéder à l’évaluation{evalLinks.length > 1 ? ` · ${evalLinks.length} groupes` : ''}
+                <IconLink size={16} /> Accéder à l’évaluation{evalLinks.length > 1 ? ` · ${evalLinks.length} groupes` : ''}
               </button>
             </div>
             {evalWindowLabel() && <p className="hint">{evalWindowLabel()}</p>}
@@ -556,13 +556,13 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
         )}
         {eState === 'upcoming' && (
           <div className="pp-banner" style={{ marginBottom: 14 }}>
-            🕒
+            <IconClock size={16} />
             <span><b>Évaluation à venir</b> — ouverture {new Date(slot.evalStartsAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à {new Date(slot.evalStartsAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} ({slot.evalMinutes} min). Le lien sera actif uniquement pendant la fenêtre.</span>
           </div>
         )}
         {eState === 'ended' && (
           <div className="pp-banner" style={{ marginBottom: 14 }}>
-            🕒
+            <IconClock size={16} />
             <span><b>Évaluation terminée</b> — le temps imparti est écoulé, le lien n’est plus accessible.</span>
           </div>
         )}
@@ -590,14 +590,14 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
                   className={cx('btn btn-ghost grow', slot.coursePostponed && 'pp-btn')}
                   onClick={() => (slot.coursePostponed ? onPostpone(slot, 'course') : (setPpWhat('course'), setPpReason('')))}
                 >
-                  {slot.coursePostponed ? 'Rétablir le cours' : <>⏸️ Reporter le cours</>}
+                  {slot.coursePostponed ? 'Rétablir le cours' : <><IconPause size={15} /> Reporter le cours</>}
                 </button>
                 {(slot.evalUrl || slot.evalLinks?.length) && !slot.coursePostponed && (
                   <button
                     className={cx('btn btn-ghost grow', slot.evalPostponed && 'pp-btn')}
                     onClick={() => (slot.evalPostponed ? onPostpone(slot, 'eval') : (setPpWhat('eval'), setPpReason('')))}
                   >
-                    {slot.evalPostponed ? 'Rétablir l’éval.' : <>⏸️ Reporter l’éval.</>}
+                    {slot.evalPostponed ? 'Rétablir l’éval.' : <><IconPause size={15} /> Reporter l’éval.</>}
                   </button>
                 )}
               </div>
@@ -607,12 +607,12 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
               <div className="row" style={{ marginBottom: 12 }}>
                 {slot.visioUrl && (
                   <button className={cx('btn btn-ghost grow', visioOn ? 'visio-on' : '')} onClick={() => onToggle(slot, 'visioOpen')}>
-                    🎥 Visio : {visioOn ? 'ouverte' : 'fermée'}
+                    <IconVideo size={15} /> Visio : {visioOn ? 'ouverte' : 'fermée'}
                   </button>
                 )}
                 {(slot.evalUrl || slot.evalLinks?.length) && !slot.evalPostponed && (
                   <button className={cx('btn btn-ghost grow eval', evalOn ? 'eval-on' : '')} onClick={() => onToggle(slot, 'evalOpen')}>
-                    🔗 Éval : {evalOn ? 'ouverte' : 'fermée'}
+                    <IconLink size={15} /> Éval : {evalOn ? 'ouverte' : 'fermée'}
                   </button>
                 )}
               </div>
@@ -651,8 +651,8 @@ function NotesListModal({ notes, onClose, onEdit, onToggleDone, onDelete }: {
       <div className="modal sheet-modal" role="dialog" aria-modal="true" aria-label="Mes notes">
         <div className="modal-handle" />
         <div className="modal-title">
-          <span className="row" style={{ gap: 8 }}>📝 Mes notes ({notes.length})</span>
-          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
+          <span className="row" style={{ gap: 8 }}><IconNote size={17} /> Mes notes ({notes.length})</span>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
         </div>
         <div className="sheet-scroll">
           {notes.map(n => {
@@ -679,7 +679,7 @@ function NotesListModal({ notes, onClose, onEdit, onToggleDone, onDelete }: {
                   <div className={cx('note-list-body', n.done && 'done')}>{n.body}</div>
                   {n.dueAt && !n.done && (
                     <div className="member-sub row" style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                      🕒 À rendre avant le {new Date(n.dueAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} {new Date(n.dueAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      <IconClock size={12} /> À rendre avant le {new Date(n.dueAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} {new Date(n.dueAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   )}
                 </div>
@@ -804,7 +804,7 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
         <div className="modal-handle" />
         <div className="modal-title">
           {slot ? 'Modifier le créneau' : 'Nouveau créneau'}
-          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
         </div>
         <div className="sheet-scroll">
           <form onSubmit={submit}>
@@ -905,7 +905,7 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
                     aria-label="Retirer le lien"
                     onClick={() => setEvalGroups(prev => prev.filter((_, idx) => idx !== i))}
                   >
-                    ✖️
+                    <IconClose size={14} />
                   </button>
                 </div>
               ))}
