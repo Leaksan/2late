@@ -74,7 +74,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
   return (
     <div className="screen" style={{ paddingTop: 12 }}>
       <button className="topbar-back" onClick={onCancel} style={{ marginBottom: 14 }} aria-label="Annuler">
-        <IconChevronLeft size={20} />
+        ←
       </button>
 
       {isRelais && (
@@ -170,7 +170,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
                 aria-label="Retirer le lien"
                 onClick={() => setLinks(prev => prev.filter(x => x.id !== l.id))}
               >
-                <IconClose size={14} />
+                ✖️
               </button>
             </div>
           ))}
@@ -196,10 +196,10 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
           <label>Durée de l’annonce *</label>
           <div className="priority-row">
             <button type="button" className={cx('type-btn', !temporary && 'on')} onClick={() => setTemporary(false)}>
-              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><IconInfinity size={15} /> Persistante</span>
+              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>♾️ Persistante</span>
             </button>
             <button type="button" className={cx('type-btn', temporary && 'on')} onClick={() => setTemporary(true)}>
-              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><IconClock size={15} /> Temporaire</span>
+              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>🕒 Temporaire</span>
             </button>
           </div>
           {temporary && (
@@ -279,7 +279,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
               disabled={!canUrgent}
               title={canUrgent ? undefined : 'Réservé aux professeurs et à l’administration'}
             >
-              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}><IconAlertCircle size={15} /> Urgente</span>
+              <span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>⚠️ Urgente</span>
             </button>
           </div>
           {!canUrgent && <p className="hint">La priorité urgente est réservée aux professeurs et à l’administration.</p>}

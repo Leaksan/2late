@@ -45,7 +45,7 @@ export function NoteForm({ slot, existing, onClose, onSave, onDelete }: {
         <div className="modal-handle" />
         <div className="modal-title">
           Ma note — {slot?.discipline ?? 'Cours supprimé'}
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
         </div>
         <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
           {slot ? `${DAY_LABELS[slot.day]} · ${slot.start}–${slot.end} · ${slot.teacherName}. ` : ''}
@@ -64,7 +64,7 @@ export function NoteForm({ slot, existing, onClose, onSave, onDelete }: {
           </div>
 
           <div className="field">
-            <label><span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><IconClock size={14} /> À rendre avant</span></label>
+            <label><span className="row" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>🕒 À rendre avant</span></label>
             <label className="hint check-row">
               <input type="checkbox" checked={hasDue} onChange={e => setHasDue(e.target.checked)} />
               Définir une échéance (rappel automatique 48 h avant)

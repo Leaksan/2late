@@ -96,7 +96,7 @@ function MilestoneRow({ m, count, onSave, onDelete, onReset }: {
       <div style={{ padding: '16px 18px' }}>
         <div className="row" style={{ marginBottom: 10 }}>
           <span className={cx('badge', m.reachedAt ? 'badge-reliable' : 'badge-novote')} style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-            {m.reachedAt && <IconCheckCircle size={12} />}
+            {m.reachedAt && '✅'}
             {m.reachedAt ? 'Atteint' : 'En attente'}
           </span>
           <span className="hint" style={{ margin: 0 }}>
@@ -153,7 +153,7 @@ function RoomAdminCard({ room }: { room: ChatRoomInfo }) {
           <div className="list-sub">{room.description} · {participants.length} membre{participants.length > 1 ? 's' : ''}</div>
         </div>
           <span style={{ color: 'var(--faint)', display: 'inline-flex', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
-          <IconChevronDown size={20} />
+          ▾
         </span>
       </button>
 
@@ -370,21 +370,21 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
         <>
           <div className="stat-grid">
             <div className="stat-card">
-              <div className="stat-label"><IconUsers size={15} /> Étudiants inscrits</div>
+              <div className="stat-label">👥 Étudiants inscrits</div>
               <div className="stat-num">{students.length}</div>
               <div className="stat-sub">{relaisCount} relais actif{relaisCount > 1 ? 's' : ''}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label"><IconMegaphone size={15} /> Annonces</div>
+              <div className="stat-label">📣 Annonces</div>
               <div className="stat-num">{db.announcements.length}</div>
               <div className="stat-sub">{urgentCount} urgente{urgentCount > 1 ? 's' : ''}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label"><IconChat size={15} /> Commentaires</div>
+              <div className="stat-label">💬 Commentaires</div>
               <div className="stat-num">{db.comments.length}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label"><IconGauge size={15} /> Taux de lecture moyen</div>
+              <div className="stat-label">📊 Taux de lecture moyen</div>
               <div className="stat-num">{avgRead === null ? '—' : `${avgRead}%`}</div>
               <div className="stat-sub">publics étudiants ciblés</div>
             </div>
@@ -472,7 +472,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                       <span className="badge badge-type">{TYPE_INFO[ann.type].label}</span>
                       {!isPublished(ann) && (
                         <span className="badge badge-temp" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <IconClock size={11} /> programmée · {new Date(ann.publishAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} {new Date(ann.publishAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          🕒 programmée · {new Date(ann.publishAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} {new Date(ann.publishAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                       {ann.repeat && <span className="badge badge-repeat">🔄 {REPEAT_LABELS[ann.repeat]}</span>}
@@ -482,7 +482,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                       ) : (
                         ann.expiresAt ? (
                           <span className="badge badge-temp" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <IconClock size={11} /> {timeLeft(ann.expiresAt)}
+                            🕒 {timeLeft(ann.expiresAt)}
                           </span>
                         ) : null
                       )}
@@ -597,7 +597,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                   <div className="list-sub">Demande envoyée {timeAgo(app.createdAt)}</div>
                   {app.whatsapp && (
                     <div className="row-flags">
-                      <span className="badge badge-type row" style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}><IconChat size={12} /> {app.whatsapp}</span>
+                      <span className="badge badge-type row" style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>💬 {app.whatsapp}</span>
                       <a
                         className="text-btn primary"
                         href={`https://wa.me/${app.whatsapp.replace(/\D/g, '')}`}
@@ -624,11 +624,11 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
               <div className="list-card">
                 {decided.slice(0, 8).map(({ app, user: u }) => (
                   <div className="list-row" key={app.id} style={{ padding: '13px 18px' }}>
-                    <div className="list-ico"><IconGauge size={18} /></div>
+                    <div className="list-ico">📊</div>
                     <div className="grow">
                       <div className="list-label" style={{ fontSize: 14 }}>{u?.name ?? '—'}</div>
                   <div className="list-sub row" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {app.status === 'APPROVED' ? <><IconCheckCircle size={14} /> Promu Relais</> : <><IconClose size={14} /> Refusé</>} · {formatDateTime(app.decidedAt ?? app.createdAt)}
+                    {app.status === 'APPROVED' ? <>✅ Promu Relais</> : <>✖️ Refusé</>} · {formatDateTime(app.decidedAt ?? app.createdAt)}
                   </div>
                     </div>
                   </div>
@@ -693,7 +693,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
             <div className="modal-handle" />
             <div className="modal-title">
               Nouveau compte
-              <button className="modal-close" onClick={() => setProfModal(false)} aria-label="Fermer"><IconClose size={16} /></button>
+              <button className="modal-close" onClick={() => setProfModal(false)} aria-label="Fermer">✖️</button>
             </div>
             <form onSubmit={submitProf}>
               <div className="field">
@@ -733,7 +733,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
             <div className="modal-handle" />
             <div className="modal-title">
               Lien de réinitialisation
-              <button className="modal-close" onClick={() => setPwdModal(null)} aria-label="Fermer"><IconClose size={16} /></button>
+              <button className="modal-close" onClick={() => setPwdModal(null)} aria-label="Fermer">✖️</button>
             </div>
             <p className="hint" style={{ marginTop: -8, marginBottom: 14 }}>
               Pour <b style={{ color: 'var(--text)' }}>{pwdModal.name}</b> — {pwdModal.email}
@@ -773,7 +773,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
             <div className="modal-handle" />
             <div className="modal-title">
               Fiabilité de l’annonce
-              <button className="modal-close" onClick={() => setRelModal(null)} aria-label="Fermer"><IconClose size={16} /></button>
+              <button className="modal-close" onClick={() => setRelModal(null)} aria-label="Fermer">✖️</button>
             </div>
             <p className="hint" style={{ marginTop: -8, marginBottom: 14 }}>« {relModal.title} »</p>
             <div className="field">

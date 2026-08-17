@@ -61,7 +61,7 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
           ) : (
             ann.expiresAt ? (
               <span className="badge badge-temp" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <IconClock size={11} /> {timeLeft(ann.expiresAt)}
+                🕒 {timeLeft(ann.expiresAt)}
               </span>
             ) : null
           )}
@@ -80,7 +80,7 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
                 style={{ display: 'inline-flex', gap: 6 }}
                 onClick={e => { e.stopPropagation(); window.open(l.url, '_blank', 'noopener'); }}
               >
-                <IconLink size={13} /> {l.label}
+                🔗 {l.label}
               </button>
             ))}
             {ann.links.length > 2 && <span className="badge badge-type">+{ann.links.length - 2}</span>}
@@ -94,7 +94,7 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
             <>
               <span className="sep">·</span>
               <span className="ann-threads">
-                <IconChat size={13} /> {nbComments}
+                💬 {nbComments}
               </span>
             </>
           )}

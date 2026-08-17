@@ -1700,3 +1700,13 @@ button:disabled { cursor: not-allowed; }
   padding: 8px 12px;
   margin-top: 8px;
 }
+
+/* ---------- Icônes emoji (à la place des SVG) ---------- */
+.nav-emoji { display: block; font-size: 21px; line-height: 1.15; }
+.fab { font-size: 24px; line-height: 1; }
+.empty-ico { font-size: 26px; line-height: 1.2; }
+.topbar-back { font-size: 20px; line-height: 1; }
+.send-btn { font-size: 18px; }
+.wa-btn { font-size: 15px; line-height: 1; }
+.modal-close { font-size: 14px; }
+.sub-file > svg, .list-ico { color: var(--primary); }

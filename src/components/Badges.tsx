@@ -31,9 +31,9 @@ export function TypeBadge({ ann }: { ann: Announcement }) {
 }
 
 export function ReliabilityBadge({ pct, total }: { pct: number | null; total: number }) {
-  if (pct !== null && pct >= 70) return <span className="badge badge-reliable"><IconCheckCircle size={12} /> Fiable · {pct}%</span>;
+  if (pct !== null && pct >= 70) return <span className="badge badge-reliable">✅ Fiable · {pct}%</span>;
   if (total === 0) return <span className="badge badge-novote">Non notée</span>;
-  return <span className="badge badge-contested"><IconAlertCircle size={12} /> Contestée · {pct ?? 0}%</span>;
+  return <span className="badge badge-contested">⚠️ Contestée · {pct ?? 0}%</span>;
 }
 
 export function stripeColor(role: Role): string {

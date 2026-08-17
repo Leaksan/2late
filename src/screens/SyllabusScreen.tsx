@@ -120,7 +120,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
         <div className="modal-handle" />
         <div className="modal-title">
           Déposer un document
-          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={15} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer">✖️</button>
         </div>
         <form onSubmit={submit}>
           <div className="field">
@@ -158,7 +158,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
                 accept="application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
                 onChange={e => setFile(e.target.files?.[0] ?? null)}
               />
-              <IconFileText size={18} />
+              📄
               <span className="grow" style={{ minWidth: 0 }}>
                 {file ? file.name : 'Choisir un fichier (PDF, image, document…)'}
                 {file && <span className="syl-file-size"> · {formatSize(file.size)}</span>}
@@ -247,7 +247,7 @@ export function SyllabusScreen() {
   return (
     <>
       <div className="pill-info row" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 14 }}>
-        <span style={{ flex: 'none', marginTop: 2, color: 'var(--primary)' }}><IconBook size={15} /></span>
+        <span style={{ flex: 'none', marginTop: 2, color: 'var(--primary)' }}>📚</span>
         <span>Documents officiels déposés par les <b>enseignants</b> et les <b>relais</b> : programmes, fiches de TP, guides…</span>
       </div>
 
@@ -262,7 +262,7 @@ export function SyllabusScreen() {
           />
           {q && (
             <button className="syl-search-clear" onClick={() => setQ('')} aria-label="Effacer la recherche">
-              <IconClose size={14} />
+              ✖️
             </button>
           )}
         </div>
@@ -288,7 +288,7 @@ export function SyllabusScreen() {
 
       {visible.length === 0 && (
         <div className="empty">
-          <div className="empty-ico"><IconFileText size={26} /></div>
+          <div className="empty-ico">📄</div>
           {q.trim() ? (
             <>
               <b>Aucun résultat</b>
@@ -305,7 +305,7 @@ export function SyllabusScreen() {
 
       {canPost && (
         <button className="fab" onClick={() => setUploadOpen(true)} aria-label="Déposer un document">
-          <IconPlus size={26} />
+          ➕
         </button>
       )}
 
