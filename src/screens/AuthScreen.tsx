@@ -5,7 +5,7 @@ import { IconLogo } from '../ui/Icons';
 
 const DEMO = [
   { label: 'Admin', email: 'admin@2late.com', pwd: 'admin' },
-  { label: 'Professeur', email: 'prof@2late.com', pwd: 'prof' },
+  { label: 'Prof / Informaticien', email: 'prof@2late.com', pwd: 'prof' },
   { label: 'Relais STI', email: 'marc@2late.com', pwd: 'marc' },
   { label: 'Étudiant STI', email: 'etu@2late.com', pwd: 'etu' }
 ];

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLLECT_ACCESS_LABELS, POLES, POLE_LABELS, TYPES, TYPE_INFO, type Announcement, type AnnLink, type CollectAccess, type Pole } from '../types';
+import { COLLECT_ACCESS_LABELS, POLES, POLE_LABELS, REPEAT_LABELS, TYPES, TYPE_INFO, type Announcement, type AnnLink, type CollectAccess, type Pole, type RepeatKind } from '../types';
 import { useStore } from '../store';
 import { IconAlertCircle, IconChevronLeft, IconClock, IconClose, IconInfinity, IconLink } from '../ui/Icons';
 import { cx, uid } from '../utils';
@@ -15,6 +15,13 @@ const DURATIONS: Array<{ label: string; hours: number }> = [
 
 const QUICK_LABELS = ['Visio', 'Évaluation', 'Document', 'Groupe WhatsApp'];
 
+function toLocalDT(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => void; onCancel: () => void }) {
   const { user, publish } = useStore();
   const [title, setTitle] = useState('');
@@ -27,6 +34,10 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
   const [customH, setCustomH] = useState('');
   const [links, setLinks] = useState<AnnLink[]>([]);
   const [collectAccess, setCollectAccess] = useState<CollectAccess>('PROF');
+  const [collectEmail, setCollectEmail] = useState('');
+  const [scheduled, setScheduled] = useState(false);
+  const [publishAt, setPublishAt] = useState('');
+  const [repeat, setRepeat] = useState<RepeatKind | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!user) return null;
@@ -50,7 +61,12 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
       if (!Number.isFinite(hours) || hours <= 0) return setError('Durée invalide pour l’annonce temporaire.');
       expiresAt = new Date(Date.now() + hours * 3600_000).toISOString();
     }
-    const err = publish({ title, type, description, poles, priority, links, expiresAt, collectAccess });
+    let publishAtIso: string | null = null;
+    if (scheduled) {
+      if (!publishAt) return setError('Indiquez la date et l’heure de publication programmée.');
+      publishAtIso = new Date(publishAt).toISOString();
+    }
+    const err = publish({ title, type, description, poles, priority, links, expiresAt, collectAccess, collectEmail, publishAt: publishAtIso, repeat });
     if (err) setError(err);
     else onDone('new');
   };
@@ -88,17 +104,30 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
         </div>
 
         {type === 'PARTICIPATIVE' && (
-          <div className="field">
-            <label>Qui pourra télécharger les documents collectés ? *</label>
-            <div className="chips">
-              {(['AUTHOR', 'PROF', 'RELAIS'] as CollectAccess[]).map(a => (
-                <button type="button" key={a} className={cx('chip', collectAccess === a && 'on')} onClick={() => setCollectAccess(a)}>
-                  {COLLECT_ACCESS_LABELS[a]}
-                </button>
-              ))}
+          <>
+            <div className="field">
+              <label>Qui pourra télécharger les documents collectés ? *</label>
+              <div className="chips">
+                {(['AUTHOR', 'PROF', 'RELAIS'] as CollectAccess[]).map(a => (
+                  <button type="button" key={a} className={cx('chip', collectAccess === a && 'on')} onClick={() => setCollectAccess(a)}>
+                    {COLLECT_ACCESS_LABELS[a]}
+                  </button>
+                ))}
+              </div>
+              <p className="hint">Réglage modifiable à tout moment depuis l’annonce. L’administration garde toujours un accès de supervision.</p>
             </div>
-            <p className="hint">Réglage modifiable à tout moment depuis l’annonce. L’administration garde toujours un accès de supervision.</p>
-          </div>
+            <div className="field">
+              <label>Réception automatique par e-mail (optionnel)</label>
+              <input
+                className="input"
+                type="email"
+                value={collectEmail}
+                onChange={e => setCollectEmail(e.target.value)}
+                placeholder={user.email}
+              />
+              <p className="hint">Chaque document déposé par les étudiants vous est transmis automatiquement à cette adresse (votre e-mail de compte par défaut).</p>
+            </div>
+          </>
         )}
 
         <div className="field">
@@ -196,6 +225,45 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
             </>
           )}
           {!temporary && <p className="hint">Reste affichée jusqu’à sa suppression manuelle.</p>}
+        </div>
+
+        <div className="field">
+          <label>Publication programmée</label>
+          <div className="priority-row">
+            <button type="button" className={cx('type-btn', !scheduled && 'on')} onClick={() => { setScheduled(false); setPublishAt(''); }}>
+              Immédiate
+            </button>
+            <button type="button" className={cx('type-btn', scheduled && 'on')} onClick={() => setScheduled(true)}>
+              Programmer…
+            </button>
+          </div>
+          {scheduled && (
+            <>
+              <input
+                className="input"
+                style={{ marginTop: 8 }}
+                type="datetime-local"
+                value={publishAt}
+                onChange={e => setPublishAt(e.target.value)}
+              />
+              <p className="hint">L’annonce apparaîtra automatiquement dans les fils à cette date et heure — invisible avant.</p>
+            </>
+          )}
+        </div>
+
+        <div className="field">
+          <label>Annonce répétée</label>
+          <div className="chips">
+            <button type="button" className={cx('chip', repeat === null && 'on')} onClick={() => setRepeat(null)}>
+              Ponctuelle
+            </button>
+            {(['DAILY', 'WEEKLY', 'MONTHLY'] as RepeatKind[]).map(r => (
+              <button type="button" key={r} className={cx('chip', repeat === r && 'on')} onClick={() => setRepeat(r)}>
+                🔄 {REPEAT_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <p className="hint">Une annonce répétée revient automatiquement dans « À lire » à chaque cycle, même après consultation — idéal pour les rappels réguliers.</p>
         </div>
 
         <div className="field">

@@ -1652,3 +1652,51 @@ button:disabled { cursor: not-allowed; }
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* ---------- TimeChip (dates d'envoi) ---------- */
+.time-chip {
+  display: inline-flex; gap: 5px; align-items: center;
+  background: var(--card-2);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+.time-chip b { color: var(--text); font-weight: 700; }
+.time-chip-day { color: var(--faint); }
+.time-chip svg { color: var(--primary); flex: none; }
+
+/* ---------- Badge annonce répétée ---------- */
+.badge-repeat {
+  color: var(--yellow);
+  background: rgba(229, 193, 0, 0.1);
+  border-color: rgba(229, 193, 0, 0.3);
+}
+
+/* ---------- Réception e-mail de la collecte ---------- */
+.collect-mail {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-xs);
+  background: var(--bg-elev);
+  padding: 8px 12px;
+  margin: 10px 0;
+}
+.collect-mail-state {
+  display: inline-flex; gap: 6px; align-items: center;
+  font-size: 12.5px; color: var(--muted);
+}
+.collect-mail-state svg { color: var(--primary); flex: none; }
+.collect-mail-btn { margin-left: auto; }
+.sub-sent-ok {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 12.5px; color: var(--green);
+  background: rgba(61, 214, 140, 0.08);
+  border: 1px solid rgba(61, 214, 140, 0.3);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  margin-top: 8px;
+}

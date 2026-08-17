@@ -1,5 +1,5 @@
 import type { Announcement, Comment, DB, Grade, Pole, ScheduleSlot, Subject, Submission, SyllabusDoc, User, Vote } from '../types';
-import { POLES } from '../types';
+import { POLES, REPEAT_MS } from '../types';
 import { demoPdf, putFile } from './files';
 
 const DB_KEY = '2late.db.v1';
@@ -102,7 +102,31 @@ export function seedDB(): DB {
       description: 'Pour éviter les fichiers perdus entre WhatsApp et ma boîte mail : déposez vos exercices directement ici avant ce soir 23 h. Chaque dépôt arrive classé à votre nom, avec son heure d’envoi.',
       poles: ['STI'],
       priority: 'NORMALE',
+      collectAccess: 'PROF',
+      collectEmail: 'prof@2late.com',
       createdAt: hoursAgo(4)
+    },
+    {
+      id: 'a9',
+      authorId: 'u-admin',
+      title: 'Rappel hebdo — point annonces & fiabilité',
+      type: 'GENERALE',
+      description: 'Chaque semaine, les relais passent en revue les annonces de leur pôle : fiabilité, contestations, informations manquantes. Ce rappel revient automatiquement dans « À lire ».',
+      poles: [...POLES],
+      priority: 'NORMALE',
+      repeat: 'WEEKLY',
+      createdAt: hoursAgo(30)
+    },
+    {
+      id: 'a10',
+      authorId: 'u-prof',
+      title: 'Ouverture des inscriptions au tutorat',
+      type: 'GENERALE',
+      description: 'Annonce programmée : les inscriptions ouvriront automatiquement à la date prévue. Testez la publication différée !',
+      poles: ['STI'],
+      priority: 'NORMALE',
+      publishAt: new Date(Date.now() + 2 * 3600_000).toISOString(),
+      createdAt: hoursAgo(1)
     }
   ];
 
@@ -390,6 +414,13 @@ export function loadDB(): DB {
           if (!parsed.announcements.some(a => a.type === 'PARTICIPATIVE')) {
             parsed.announcements.push(...fresh.announcements.filter(a => a.type === 'PARTICIPATIVE'));
           }
+          // Démo : annonce répétée + annonce programmée pour les appareils existants.
+          if (!parsed.announcements.some(a => a.repeat)) {
+            parsed.announcements.push(...fresh.announcements.filter(a => a.repeat));
+          }
+          if (!parsed.announcements.some(a => a.publishAt)) {
+            parsed.announcements.push(...fresh.announcements.filter(a => a.publishAt));
+          }
           const demoEval = fresh.scheduleSlots.find(s => s.id === 'sti-1');
           const target = parsed.scheduleSlots.find(s => s.id === 'sti-1');
           if (demoEval && target && !target.evalLinks) {
@@ -401,6 +432,16 @@ export function loadDB(): DB {
           const freshUsers = new Map(fresh.users.map(u => [u.id, u]));
           for (const u of parsed.users) {
             if (!u.whatsapp) u.whatsapp = freshUsers.get(u.id)?.whatsapp;
+          }
+        }
+        // Démo éval chronométrée : si la fenêtre semée est expirée depuis longtemps
+        // et que les liens sont encore ceux de la démo, on la repositionne sur « en cours »
+        // pour que les groupes restent démontrables.
+        for (const s of parsed.scheduleSlots) {
+          const isDemoEval = s.id === 'sti-1' && s.evalStartsAt && s.evalMinutes &&
+            s.evalLinks?.length === 2 && s.evalLinks.every(l => l.url.includes('sti-1-g'));
+          if (isDemoEval && Date.now() > Date.parse(s.evalStartsAt!) + 6 * 3600_000) {
+            s.evalStartsAt = new Date(Date.now() - 10 * 60_000).toISOString();
           }
         }
         return { ...parsed, version: 2 };
@@ -470,12 +511,25 @@ export function isExpired(ann: Announcement): boolean {
   return !!ann.expiresAt && Date.now() >= Date.parse(ann.expiresAt);
 }
 
+// Annonce programmée : invisible dans les fils tant que la date n'est pas atteinte.
+export function isPublished(ann: Announcement): boolean {
+  return !ann.publishAt || Date.now() >= Date.parse(ann.publishAt);
+}
+
+// Lecture « effective » : une annonce répétée repasse à lire quand son cycle est écoulé.
+export function isReadNow(db: DB, ann: Announcement, userId: string): boolean {
+  const r = db.reads.find(rc => rc.announcementId === ann.id && rc.userId === userId);
+  if (!r) return false;
+  if (!ann.repeat) return true;
+  return Date.now() - Date.parse(r.readAt) < REPEAT_MS[ann.repeat];
+}
+
 export function feeds(db: DB, user: User): { toRead: Announcement[]; seen: Announcement[] } {
-  const vis = visibleAnnouncements(db, user).filter(a => !isExpired(a));
+  const vis = visibleAnnouncements(db, user).filter(a => !isExpired(a) && isPublished(a));
   const byUrgentThenDate = (a: Announcement, b: Announcement) =>
     (a.priority === 'URGENTE' ? 0 : 1) - (b.priority === 'URGENTE' ? 0 : 1) || Date.parse(b.createdAt) - Date.parse(a.createdAt);
-  const toRead = vis.filter(a => !hasRead(db, a.id, user.id)).sort(byUrgentThenDate);
-  const seen = vis.filter(a => hasRead(db, a.id, user.id)).sort((a, b) => readAtOf(db, b.id, user.id) - readAtOf(db, a.id, user.id));
+  const toRead = vis.filter(a => !isReadNow(db, a, user.id)).sort(byUrgentThenDate);
+  const seen = vis.filter(a => isReadNow(db, a, user.id)).sort((a, b) => readAtOf(db, b.id, user.id) - readAtOf(db, a.id, user.id));
   return { toRead, seen };
 }
 

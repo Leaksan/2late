@@ -1,5 +1,6 @@
 import type { Announcement } from '../types';
-import { commentsOf, hasRead, isExpired, reliabilityOfAnn, userById } from '../data/db';
+import { REPEAT_LABELS } from '../types';
+import { commentsOf, isExpired, isReadNow, reliabilityOfAnn, userById } from '../data/db';
 import { useStore } from '../store';
 import { cx, timeAgo } from '../utils';
 import { IconChat, IconClock, IconLink } from '../ui/Icons';
@@ -23,7 +24,7 @@ export function timeLeft(expiresAt: string): string {
 export function AnnouncementCard({ ann, onOpen }: Props) {
   const { db, user } = useStore();
   const author = userById(db, ann.authorId);
-  const read = user ? hasRead(db, ann.id, user.id) : false;
+  const read = user ? isReadNow(db, ann, user.id) : false;
   const isRelais = author?.role === 'RELAIS';
   const rel = reliabilityOfAnn(db, ann);
   const nbComments = commentsOf(db, ann.id).length;
@@ -53,6 +54,7 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
               <span className="badge badge-participative">📥 Je dépose mes documents</span>
             )
           )}
+          {ann.repeat && !expired && <span className="badge badge-repeat">🔄 {REPEAT_LABELS[ann.repeat]}</span>}
           {isRelais && <ReliabilityBadge pct={rel.pct} total={rel.total} />}
           {expired ? (
             <span className="badge badge-off">Expirée</span>

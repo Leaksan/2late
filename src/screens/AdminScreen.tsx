@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { POLES, ROLE_LABELS, TYPES, TYPE_INFO, type Announcement, type Role, type User } from '../types';
+import { POLES, REPEAT_LABELS, ROLE_LABELS, TYPES, TYPE_INFO, type Announcement, type Role, type User } from '../types';
 import type { DB } from '../types';
-import { isExpired, reliabilityOfAnn, userById } from '../data/db';
+import { isExpired, isPublished, reliabilityOfAnn, userById } from '../data/db';
 import { timeLeft } from '../components/AnnouncementCard';
 import type { Milestone } from '../types';
 import { uid } from '../utils';
@@ -470,6 +470,12 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                       {author && <RoleBadge role={author.role} />}
                       {ann.priority === 'URGENTE' && <span className="badge badge-urgent">URGENT</span>}
                       <span className="badge badge-type">{TYPE_INFO[ann.type].label}</span>
+                      {!isPublished(ann) && (
+                        <span className="badge badge-temp" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <IconClock size={11} /> programmée · {new Date(ann.publishAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} {new Date(ann.publishAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                      {ann.repeat && <span className="badge badge-repeat">🔄 {REPEAT_LABELS[ann.repeat]}</span>}
                       {author?.role === 'RELAIS' && <ReliabilityBadge pct={rel.pct} total={rel.total} />}
                       {isExpired(ann) ? (
                         <span className="badge badge-off">Expirée</span>
@@ -524,7 +530,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
             style={{ marginBottom: 14 }}
             onClick={() => { setProfModal(true); setPErr(null); setPOk(null); }}
           >
-            + Créer un compte Professeur / Admin
+            + Créer un compte Prof / Informaticien / Admin
           </button>
 
           {filteredUsers.map(u => {
@@ -705,7 +711,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
               <div className="field">
                 <label>Rôle</label>
                 <div className="priority-row">
-                  <button type="button" className={cx('type-btn', pRole === 'PROF' && 'on')} onClick={() => setPRole('PROF')}>Professeur</button>
+                  <button type="button" className={cx('type-btn', pRole === 'PROF' && 'on')} onClick={() => setPRole('PROF')}>Prof / Informaticien</button>
                   <button type="button" className={cx('type-btn', pRole === 'ADMIN' && 'on')} onClick={() => setPRole('ADMIN')}>Administrateur</button>
                 </div>
               </div>

@@ -6,6 +6,21 @@ export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REFUSED';
 // Qui a le droit de télécharger les documents collectés d'une annonce participative.
 export type CollectAccess = 'AUTHOR' | 'PROF' | 'RELAIS';
 
+// Récurrence d'une annonce : elle revient « à lire » à chaque cycle.
+export type RepeatKind = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export const REPEAT_MS: Record<RepeatKind, number> = {
+  DAILY: 24 * 3600_000,
+  WEEKLY: 7 * 24 * 3600_000,
+  MONTHLY: 30 * 24 * 3600_000
+};
+
+export const REPEAT_LABELS: Record<RepeatKind, string> = {
+  DAILY: 'Chaque jour',
+  WEEKLY: 'Chaque semaine',
+  MONTHLY: 'Chaque mois'
+};
+
 export const COLLECT_ACCESS_LABELS: Record<CollectAccess, string> = {
   AUTHOR: 'Uniquement l’auteur de la collecte',
   PROF: 'Enseignants & administration',
@@ -42,6 +57,9 @@ export interface Announcement {
   links?: AnnLink[];
   expiresAt?: string | null;
   collectAccess?: CollectAccess;
+  collectEmail?: string | null;
+  publishAt?: string | null;
+  repeat?: RepeatKind | null;
   createdAt: string;
 }
 
@@ -257,7 +275,7 @@ export const TYPE_INFO: Record<AnnouncementType, { label: string }> = {
 export const ROLE_LABELS: Record<Role, string> = {
   ETUDIANT: 'Étudiant',
   RELAIS: 'Relais',
-  PROF: 'Professeur',
+  PROF: 'Prof / Informaticien',
   ADMIN: 'Administrateur'
 };
 

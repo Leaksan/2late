@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { Announcement, CollectAccess, Comment, CourseNote, DB, Grade, Milestone, Pole, ScheduleSlot, SyllabusDoc, Submission, User, Vote } from './types';
-import { isExpired, loadDB, resetDB, saveDB } from './data/db';
+import type { Announcement, CollectAccess, Comment, CourseNote, DB, Grade, Milestone, Pole, RepeatKind, ScheduleSlot, SyllabusDoc, Submission, User, Vote } from './types';
+import { isExpired, isReadNow, loadDB, resetDB, saveDB } from './data/db';
 import { canModerateRoom, defaultRoomAccess, roomById } from './data/chat';
 import { deleteFile, putFile } from './data/files';
 import { uid } from './utils';
@@ -15,7 +15,7 @@ interface Store {
   login(email: string, password: string): string | null;
   register(name: string, email: string, password: string, pole: Pole): string | null;
   logout(): void;
-  publish(input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess }): string | null;
+  publish(input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess; collectEmail?: string | null; publishAt?: string | null; repeat?: RepeatKind | null }): string | null;
   markRead(announcementId: string): void;
   vote(announcementId: string, value: 1 | -1): void;
   addComment(announcementId: string, body: string): void;
@@ -49,6 +49,7 @@ interface Store {
   submitToAnnouncement(announcementId: string, file: File): Promise<string | null>;
   deleteSubmission(id: string): void;
   setCollectAccess(announcementId: string, access: CollectAccess): void;
+  setCollectEmail(announcementId: string, email: string): string | null;
   setWhatsapp(number: string): string | null;
   resetDemoData(): void;
 }
@@ -112,13 +113,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUserId(null);
   }, []);
 
-  const publish = useCallback((input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess }): string | null => {
+  const publish = useCallback((input: { title: string; type: Announcement['type']; description?: string; poles: Pole[]; priority: Announcement['priority']; links?: Announcement['links']; expiresAt?: string | null; collectAccess?: CollectAccess; collectEmail?: string | null; publishAt?: string | null; repeat?: RepeatKind | null }): string | null => {
     if (!user) return 'Session expirée.';
     if (!input.title.trim()) return 'Le titre est obligatoire.';
     if (input.poles.length === 0) return 'Sélectionnez au moins un pôle cible.';
     if (input.priority === 'URGENTE' && user.role !== 'PROF' && user.role !== 'ADMIN') return 'Priorité urgente réservée aux professeurs et à l’administration.';
     const links = (input.links ?? []).filter(l => l.label.trim() && l.url.trim());
     if (links.some(l => !/^https?:\/\/.+\..+/.test(l.url.trim()))) return 'Liens invalides : ils doivent commencer par http(s)://';
+    const collectEmail = input.collectEmail?.trim() ?? '';
+    if (collectEmail && !/^\S+@\S+\.\S+$/.test(collectEmail)) return 'Adresse e-mail de réception invalide.';
     const id = uid('a');
     mutate(d => {
       d.announcements.push({
@@ -132,6 +135,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         links: links.length ? links : undefined,
         expiresAt: input.expiresAt ?? null,
         collectAccess: input.type === 'PARTICIPATIVE' ? (input.collectAccess ?? 'PROF') : undefined,
+        collectEmail: input.type === 'PARTICIPATIVE' && collectEmail ? collectEmail : null,
+        publishAt: input.publishAt ?? null,
+        repeat: input.repeat ?? null,
         createdAt: new Date().toISOString()
       });
     });
@@ -140,11 +146,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const markRead = useCallback((announcementId: string) => {
     if (!user) return;
-    if (db.reads.some(r => r.announcementId === announcementId && r.userId === user.id)) return;
+    const ann = db.announcements.find(a => a.id === announcementId);
+    // Annonce répétée dont le cycle est écoulé : on rafraîchit la date de lecture.
+    if (ann && isReadNow(db, ann, user.id)) return;
     mutate(d => {
-      d.reads.push({ announcementId, userId: user.id, readAt: new Date().toISOString() });
+      const existing = d.reads.find(r => r.announcementId === announcementId && r.userId === user.id);
+      if (existing) existing.readAt = new Date().toISOString();
+      else d.reads.push({ announcementId, userId: user.id, readAt: new Date().toISOString() });
     });
-  }, [user, db.reads, mutate]);
+  }, [user, db, mutate]);
 
   const vote = useCallback((announcementId: string, value: 1 | -1) => {
     if (!user) return;
@@ -529,6 +539,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, [user, mutate]);
 
+  const setCollectEmail = useCallback((announcementId: string, email: string): string | null => {
+    if (!user) return 'Session expirée.';
+    const clean = email.trim();
+    if (clean && !/^\S+@\S+\.\S+$/.test(clean)) return 'Adresse e-mail invalide.';
+    mutate(d => {
+      const ann = d.announcements.find(a => a.id === announcementId);
+      if (ann && (ann.authorId === user.id || user.role === 'ADMIN')) ann.collectEmail = clean || null;
+    });
+    return null;
+  }, [user, mutate]);
+
   const setWhatsapp = useCallback((number: string): string | null => {
     if (!user) return 'Session expirée.';
     const wa = number.trim();
@@ -550,8 +571,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser,
     setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken,
     sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot,
-  upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setWhatsapp, resetDemoData
-  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setWhatsapp, resetDemoData]);
+  upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail, setWhatsapp, resetDemoData
+  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail, setWhatsapp, resetDemoData]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

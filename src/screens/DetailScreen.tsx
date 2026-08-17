@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { canVoteOn, commentsOf, hasRead, isExpired, myVoteOf, reliabilityOfAnn, userById } from '../data/db';
+import { canVoteOn, commentsOf, isExpired, isReadNow, myVoteOf, reliabilityOfAnn, userById } from '../data/db';
 import { timeLeft } from '../components/AnnouncementCard';
+import { TimeChip } from '../components/TimeChip';
 import { useStore } from '../store';
-import { cx, formatDateTime, initials, timeAgo } from '../utils';
+import { cx, initials, timeAgo } from '../utils';
 import { formatSize, getFile } from '../data/files';
 import { COLLECT_ACCESS_LABELS, type CollectAccess, type Submission } from '../types';
 import { IconChat, IconCheckCircle, IconChevronLeft, IconClock, IconDownload, IconFileText, IconLink, IconLock, IconSend, IconThumbDown, IconThumbUp, IconWhatsapp } from '../ui/Icons';
@@ -45,10 +46,6 @@ function AccessDots({ access, onChange }: { access: CollectAccess; onChange: (a:
   );
 }
 
-function submissionStamp(iso: string): string {
-  return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
 async function downloadSubmission(s: Submission, senderName?: string) {
   const blob = await getFile(s.id);
   if (!blob) return false;
@@ -71,11 +68,14 @@ function waLink(number: string, message: string): string {
 }
 
 function ParticipativePanel({ annId }: { annId: string }) {
-  const { db, user, submitToAnnouncement, deleteSubmission, setCollectAccess } = useStore();
+  const { db, user, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail } = useStore();
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [missings, setMissings] = useState<string[]>([]);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [mailValue, setMailValue] = useState<string | null>(null);
+  const [mailErr, setMailErr] = useState<string | null>(null);
 
   const ann = db.announcements.find(a => a.id === annId);
   const subs = useMemo(() => db.submissions.filter(s => s.announcementId === annId), [db.submissions, annId]);
@@ -119,7 +119,21 @@ function ParticipativePanel({ annId }: { annId: string }) {
     const err = await submitToAnnouncement(annId, pending);
     setBusy(false);
     if (err) setError(err);
-    else setPending(null);
+    else {
+      setPending(null);
+      setSentTo(ann.collectEmail ?? null);
+    }
+  };
+
+  const mailtoLink = () => {
+    const to = ann.collectEmail || user.email;
+    const subject = encodeURIComponent(`[2late] Récolte « ${ann.title} » — ${subs.length} document(s)`);
+    const lines = subs.map(s => {
+      const name = userById(db, s.userId)?.name ?? 'Étudiant';
+      return `- ${name} : envoyé le ${new Date(s.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} (${formatSize(s.fileSize)})`;
+    });
+    const body = encodeURIComponent(`Bonjour,\n\nVoici le récapitulatif de la collecte « ${ann.title} » (${subs.length} document(s), ${nbStudents} étudiant(s)) :\n\n${lines.join('\n')}\n\nLes fichiers (nommés au nom des étudiants) sont téléchargeables depuis 2late.\n\n— ${user.name}, via 2late`);
+    return `mailto:${to}?subject=${subject}&body=${body}`;
   };
 
   const downloadAll = async (list: Submission[]) => {
@@ -178,6 +192,12 @@ function ParticipativePanel({ annId }: { annId: string }) {
             </div>
           )}
           {error && <p className="error-text" style={{ marginTop: 8 }}>{error}</p>}
+          {sentTo && (
+            <div className="sub-sent-ok">
+              <IconCheckCircle size={14} />
+              <span>Document envoyé ✓ — une copie est transmise automatiquement à <b>{sentTo}</b>.</span>
+            </div>
+          )}
 
           {mine.length > 0 && (
             <div className="sub-mine">
@@ -185,7 +205,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
               {mine.map(s => (
                 <div className="sub-row own" key={s.id}>
                   <span className="sub-file"><IconFileText size={14} /> {s.fileName}</span>
-                  <span className="sub-time">{formatSize(s.fileSize)} · envoyé à {submissionStamp(s.createdAt)}</span>
+                  <span className="sub-time">envoyé <TimeChip iso={s.createdAt} seconds /> · {formatSize(s.fileSize)}</span>
                   <div className="list-actions">
                     <button className="text-btn primary" onClick={() => void downloadSubmission(s)}>Télécharger</button>
                     <button className="text-btn danger" onClick={() => deleteSubmission(s.id)}>Retirer</button>
@@ -229,6 +249,50 @@ function ParticipativePanel({ annId }: { annId: string }) {
             </div>
           )}
 
+          <div className="collect-mail">
+            <span className="collect-mail-state">
+              <IconSend size={13} />
+              {ann.collectEmail
+                ? <>Réception automatique : <b>{ann.collectEmail}</b></>
+                : 'Réception automatique : désactivée'}
+            </span>
+            {canManageAccess && (
+              mailValue === null ? (
+                <button className="text-btn primary" onClick={() => { setMailValue(ann.collectEmail ?? user.email); setMailErr(null); }}>
+                  {ann.collectEmail ? 'Modifier' : 'Activer'}
+                </button>
+              ) : (
+                <span className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  <input
+                    className="input"
+                    style={{ maxWidth: 210 }}
+                    type="email"
+                    value={mailValue}
+                    onChange={e => { setMailValue(e.target.value); setMailErr(null); }}
+                    placeholder="adresse@univ.ga"
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const err = setCollectEmail(annId, mailValue);
+                      setMailErr(err);
+                      if (!err) setMailValue(null);
+                    }}
+                  >
+                    OK
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setMailValue(null)}>Annuler</button>
+                </span>
+              )
+            )}
+            {mailErr && <p className="error-text">{mailErr}</p>}
+            {ann.collectEmail && subs.length > 0 && (
+              <button className="btn btn-ghost btn-sm collect-mail-btn" onClick={() => window.open(mailtoLink(), '_self')}>
+                ✉️ Recevoir le récapitulatif par e-mail
+              </button>
+            )}
+          </div>
+
           {subs.length === 0 && <p className="hint" style={{ marginTop: 10 }}>Aucun dépôt pour l’instant. Les documents envoyés par les étudiants apparaîtront ici.</p>}
 
           {ordered.map(({ sub: s, student }) => (
@@ -239,7 +303,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
                   <b className="sub-file">{student?.name ?? 'Compte supprimé'}</b>
                   {student && <RoleBadge role={student.role} />}
                 </div>
-                <span className="sub-time">envoyé à {submissionStamp(s.createdAt)} · {formatSize(s.fileSize)}</span>
+                <span className="sub-time">envoyé <TimeChip iso={s.createdAt} seconds /> · {formatSize(s.fileSize)}</span>
               </div>
               {student?.whatsapp ? (
                 <button
@@ -279,7 +343,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
   const author = ann ? userById(db, ann.authorId) : undefined;
 
   useEffect(() => {
-    if (ann && user && !hasRead(db, ann.id, user.id)) markRead(ann.id);
+    if (ann && user && !isReadNow(db, ann, user.id)) markRead(ann.id);
   }, [id]);
 
   const rel = ann ? reliabilityOfAnn(db, ann) : { up: 0, down: 0, total: 0, pct: null, overridden: false };
@@ -336,7 +400,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           <span>
             <b style={{ color: 'var(--muted)' }}>{author?.name ?? 'Auteur inconnu'}</b>
             <br />
-            Publié le {formatDateTime(ann.createdAt)}
+            Publié <TimeChip iso={ann.createdAt} />
           </span>
         </div>
       </div>

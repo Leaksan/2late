@@ -774,7 +774,10 @@ function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {
       evalStartsAt = new Date(evalDate).toISOString();
       evalMinutes = mins;
     }
+    // On repart du créneau existant : les champs hors formulaire (reports…)
+    // ne doivent pas être perdus à l'édition.
     onSave({
+      ...(slot ?? {}),
       id: slot?.id ?? uid('s'),
       pole,
       day,
