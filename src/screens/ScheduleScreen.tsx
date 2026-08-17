@@ -41,7 +41,7 @@ function evalCountdownLabel(endsAt: number, now: number): string {
 
 function EvalGroupModal({ links, onClose }: { links: Array<{ group: string; url: string }>; onClose: () => void }) {
   return (
-    <div className="modal-overlay" style={{ zIndex: 150 }} onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay" style={{ zIndex: 150 }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" role="dialog" aria-modal="true" aria-label="Choisir mon groupe">
         <div className="modal-handle" />
         <div className="modal-title">
@@ -68,6 +68,8 @@ export function ScheduleScreen() {
   const [detailSlot, setDetailSlot] = useState<ScheduleSlot | null>(null);
   const [noteSlot, setNoteSlot] = useState<ScheduleSlot | null>(null);
   const [notesListOpen, setNotesListOpen] = useState(false);
+  const [subjectsOpen, setSubjectsOpen] = useState(false);
+  const [evalChooserSlot, setEvalChooserSlot] = useState<ScheduleSlot | null>(null);
   const [viewPole, setViewPole] = useState<Pole | 'ALL'>('ALL');
   const [flashId, setFlashId] = useState<string | null>(null);
   const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -126,6 +128,15 @@ export function ScheduleScreen() {
     setFormOpen(true);
   };
 
+  // Ouverture d'une éval : un seul lien → nouvel onglet direct ; plusieurs →
+  // choix du groupe dans un modal rendu à la racine de l'écran (pas imbriqué
+  // dans une carte ou un autre modal, pour éviter les soucis d'empilement).
+  const openEvalLinks = (slot: ScheduleSlot) => {
+    const links = evalLinksOf(slot);
+    if (links.length <= 1) window.open(links[0]?.url, '_blank', 'noopener');
+    else setEvalChooserSlot(slot);
+  };
+
   const toggle = (slot: ScheduleSlot, key: 'visioOpen' | 'evalOpen') => {
     upsertScheduleSlot({ ...slot, [key]: !(slot[key] ?? true) });
   };
@@ -157,6 +168,12 @@ export function ScheduleScreen() {
             <button key={p} className={cx('chip', viewPole === p && 'on')} onClick={() => setViewPole(p)}>{p}</button>
           ))}
         </div>
+      )}
+
+      {canManage && (
+        <button className="btn btn-ghost btn-sm notes-toggle" style={{ marginRight: 8 }} onClick={() => setSubjectsOpen(true)}>
+          <IconBook size={14} /> Matières
+        </button>
       )}
 
       {myNotes.length > 0 && (
@@ -255,6 +272,7 @@ export function ScheduleScreen() {
                 onToggle={toggle}
                 onPostpone={togglePostponed}
                 onNote={() => setNoteSlot(s)}
+                onEvalOpen={openEvalLinks}
               />
             </div>
           ))}
@@ -284,6 +302,7 @@ export function ScheduleScreen() {
           onToggle={toggle}
           onPostpone={togglePostponed}
           onNote={() => { setNoteSlot(db.scheduleSlots.find(s => s.id === detailSlot.id) ?? detailSlot); setDetailSlot(null); }}
+          onEvalOpen={openEvalLinks}
         />
       )}
 
@@ -295,6 +314,14 @@ export function ScheduleScreen() {
           onSave={note => { upsertCourseNote({ ...note, userId: user.id }); setNoteSlot(null); }}
           onDelete={id => { deleteCourseNote(id); setNoteSlot(null); }}
         />
+      )}
+
+      {evalChooserSlot && (
+        <EvalGroupModal links={evalLinksOf(evalChooserSlot)} onClose={() => setEvalChooserSlot(null)} />
+      )}
+
+      {subjectsOpen && user && (
+        <SubjectsModal pole={lockedPole ?? viewPole} onClose={() => setSubjectsOpen(false)} />
       )}
 
       {notesListOpen && user && (
@@ -323,7 +350,7 @@ export function ScheduleScreen() {
   );
 }
 
-function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, onNote }: {
+function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, onNote, onEvalOpen }: {
   slot: ScheduleSlot;
   flash: boolean;
   canManage: boolean;
@@ -332,23 +359,16 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
   onToggle: (slot: ScheduleSlot, key: 'visioOpen' | 'evalOpen') => void;
   onPostpone: (slot: ScheduleSlot, what: 'course' | 'eval', reason?: string) => void;
   onNote: () => void;
+  onEvalOpen: (slot: ScheduleSlot) => void;
 }) {
-  const [evalChooser, setEvalChooser] = useState(false);
   const now = Date.now();
   const visioOn = !!slot.visioUrl && (slot.visioOpen ?? true) && !slot.coursePostponed;
   const evalOn = !!(slot.evalUrl || slot.evalLinks?.length) && (slot.evalOpen ?? true) && !slot.evalPostponed;
   const eState = evalStateOf(slot, now);
   const both = slot.coursePostponed && slot.evalPostponed;
 
-  const openEval = () => {
-    const links = evalLinksOf(slot);
-    if (links.length <= 1) window.open(links[0]?.url, '_blank', 'noopener');
-    else setEvalChooser(true);
-  };
-
   return (
     <div className={cx('slot-card', flash && 'flash', (slot.coursePostponed || slot.evalPostponed) && 'postponed')} role="button" tabIndex={0} onClick={onOpen} onKeyDown={e => { if (e.key === 'Enter') onOpen(); }}>
-      {evalChooser && <EvalGroupModal links={evalLinksOf(slot)} onClose={() => setEvalChooser(false)} />}
       <div className="slot-time">
         {both && <span className="pp-badge">TOUT REPORTÉ</span>}
         {slot.coursePostponed && !slot.evalPostponed && <span className="pp-badge">COURS REPORTÉ</span>}
@@ -399,12 +419,12 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
                   </button>
                 )}
                 {eState === 'open' && (
-                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
+                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={() => onEvalOpen(slot)}>
                     <IconLink size={14} /> Éval · <span className="eval-countdown">{evalCountdownLabel(evalEndsAt(slot), now)}</span>
                   </button>
                 )}
                 {eState === 'plain' && evalOn && (
-                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={openEval}>
+                  <button className="btn btn-ghost btn-sm eval eval-on" onClick={() => onEvalOpen(slot)}>
                     <IconLink size={14} /> Évaluation{evalLinksOf(slot).length > 1 ? ` · ${evalLinksOf(slot).length} grp` : ''}
                   </button>
                 )}
@@ -454,7 +474,7 @@ function SlotCard({ slot, flash, canManage, note, onOpen, onToggle, onPostpone, 
   );
 }
 
-function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle, onPostpone, onNote }: {
+function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle, onPostpone, onNote, onEvalOpen }: {
   slot: ScheduleSlot;
   canManage: boolean;
   note?: CourseNote;
@@ -464,21 +484,16 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
   onToggle: (slot: ScheduleSlot, key: 'visioOpen' | 'evalOpen') => void;
   onPostpone: (slot: ScheduleSlot, what: 'course' | 'eval', reason?: string) => void;
   onNote: () => void;
+  onEvalOpen: (slot: ScheduleSlot) => void;
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [ppWhat, setPpWhat] = useState<'course' | 'eval' | null>(null);
   const [ppReason, setPpReason] = useState('');
-  const [evalChooser, setEvalChooser] = useState(false);
   const now = Date.now();
   const visioOn = !!slot.visioUrl && (slot.visioOpen ?? true) && !slot.coursePostponed;
   const evalOn = !!(slot.evalUrl || slot.evalLinks?.length) && (slot.evalOpen ?? true) && !slot.evalPostponed;
   const eState = evalStateOf(slot, now);
   const evalLinks = evalLinksOf(slot);
-
-  const openEval = () => {
-    if (evalLinks.length <= 1) window.open(evalLinks[0]?.url, '_blank', 'noopener');
-    else setEvalChooser(true);
-  };
 
   const evalWindowLabel = () => {
     if (!slot.evalStartsAt || !slot.evalMinutes) return null;
@@ -537,7 +552,6 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
             </button>
           </div>
         )}
-        {evalChooser && <EvalGroupModal links={evalLinks} onClose={() => setEvalChooser(false)} />}
         {(eState === 'open' || eState === 'plain') && (
           <div style={{ marginBottom: 14 }}>
             {eState === 'open' && (
@@ -547,7 +561,7 @@ function SlotDetail({ slot, canManage, note, onClose, onEdit, onDelete, onToggle
               </p>
             )}
             <div className="row" style={{ marginBottom: 8 }}>
-              <button className="btn btn-ghost grow eval eval-on" onClick={openEval}>
+              <button className="btn btn-ghost grow eval eval-on" onClick={() => onEvalOpen(slot)}>
                 <IconLink size={16} /> Accéder à l’évaluation{evalLinks.length > 1 ? ` · ${evalLinks.length} groupes` : ''}
               </button>
             </div>
@@ -708,6 +722,107 @@ function toLocalDT(iso?: string | null): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Gestion des matières enregistrées : modification (changement de prof,
+// intitulé adapté…) propagée à tous les créneaux qui les utilisent.
+function SubjectsModal({ pole, onClose }: { pole: Pole | 'ALL'; onClose: () => void }) {
+  const { db, updateSubject } = useStore();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ discipline: '', teacherName: '', room: '', visioUrl: '', evalUrl: '' });
+  const [error, setError] = useState<string | null>(null);
+
+  const list = useMemo(
+    () =>
+      db.subjects
+        .filter(s => pole === 'ALL' || s.pole === pole)
+        .sort((a, b) => a.discipline.localeCompare(b.discipline, 'fr')),
+    [db.subjects, pole]
+  );
+
+  const startEdit = (id: string) => {
+    const s = db.subjects.find(x => x.id === id);
+    if (!s) return;
+    setEditId(id);
+    setError(null);
+    setForm({ discipline: s.discipline, teacherName: s.teacherName, room: s.room ?? '', visioUrl: s.visioUrl ?? '', evalUrl: s.evalUrl ?? '' });
+  };
+
+  const save = () => {
+    if (!editId) return;
+    const err = updateSubject(editId, form);
+    if (err) setError(err);
+    else setEditId(null);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal sheet-modal" role="dialog" aria-modal="true" aria-label="Matières enregistrées">
+        <div className="modal-handle" />
+        <div className="modal-title">
+          <span className="row" style={{ gap: 8 }}><IconBook size={17} /> Matières enregistrées</span>
+          <button className="modal-close" onClick={onClose} aria-label="Fermer"><IconClose size={16} /></button>
+        </div>
+        <p className="hint" style={{ margin: '0 2px 10px' }}>
+          Modifier une matière (changement d’enseignant, intitulé adapté…) met à jour automatiquement tous les créneaux du pôle qui l’utilisent.
+        </p>
+        <div className="sheet-scroll">
+          {list.map(s => {
+            const nbSlots = db.scheduleSlots.filter(slot => slot.pole === s.pole && slot.discipline === s.discipline).length;
+            const editing = editId === s.id;
+            return (
+              <div key={s.id} className="sub-row" style={{ alignItems: 'flex-start' }}>
+                {editing ? (
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <div className="field">
+                      <label>Intitulé *</label>
+                      <input className="input" value={form.discipline} onChange={e => setForm(f => ({ ...f, discipline: e.target.value }))} />
+                    </div>
+                    <div className="field">
+                      <label>Enseignant *</label>
+                      <input className="input" value={form.teacherName} onChange={e => setForm(f => ({ ...f, teacherName: e.target.value }))} placeholder="Ex. Pr. Anne Mba" />
+                    </div>
+                    <div className="row" style={{ gap: 10 }}>
+                      <div className="field grow">
+                        <label>Salle</label>
+                        <input className="input" value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))} placeholder="Ex. B12" />
+                      </div>
+                      <div className="field" style={{ width: 90 }}>
+                        <label>Pôle</label>
+                        <input className="input" value={s.pole} disabled />
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label>Lien visio</label>
+                      <input className="input" value={form.visioUrl} onChange={e => setForm(f => ({ ...f, visioUrl: e.target.value }))} placeholder="https://…" />
+                    </div>
+                    <div className="field">
+                      <label>Lien évaluation</label>
+                      <input className="input" value={form.evalUrl} onChange={e => setForm(f => ({ ...f, evalUrl: e.target.value }))} placeholder="https://…" />
+                    </div>
+                    {error && <p className="error-text">{error}</p>}
+                    <div className="row" style={{ paddingBottom: 6 }}>
+                      <button className="btn btn-ghost grow" onClick={() => setEditId(null)}>Annuler</button>
+                      <button className="btn btn-primary grow" onClick={save}>Enregistrer</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div className="sub-file"><b>{s.discipline}</b></div>
+                      <span className="sub-time">{s.teacherName}{s.room ? ` · ${s.room}` : ''} · {nbSlots} créneau{nbSlots > 1 ? 'x' : ''}</span>
+                    </div>
+                    <button className="text-btn primary" onClick={() => startEdit(s.id)}>Modifier</button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+          {list.length === 0 && <p className="hint" style={{ padding: '4px 2px' }}>Aucune matière enregistrée pour cette sélection.</p>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SlotForm({ slot, subjects, defaultPole, onClose, onSave }: {

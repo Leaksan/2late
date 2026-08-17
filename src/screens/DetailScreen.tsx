@@ -6,7 +6,7 @@ import { useStore } from '../store';
 import { cx, initials, timeAgo } from '../utils';
 import { formatSize, getFile } from '../data/files';
 import { COLLECT_ACCESS_LABELS, type CollectAccess, type Submission } from '../types';
-import { IconChat, IconCheckCircle, IconChevronLeft, IconClock, IconDownload, IconFileText, IconLink, IconLock, IconSend, IconThumbDown, IconThumbUp, IconWhatsapp } from '../ui/Icons';
+import { IconChat, IconCheckCircle, IconChevronLeft, IconClock, IconDownload, IconFileText, IconLink, IconLock, IconMail, IconSend, IconThumbDown, IconThumbUp, IconWhatsapp } from '../ui/Icons';
 import { ReliabilityBadge, RoleBadge, TypeBadge, UrgentBadge, stripeColor } from '../components/Badges';
 
 function AccessDots({ access, onChange }: { access: CollectAccess; onChange: (a: CollectAccess) => void }) {
@@ -288,7 +288,7 @@ function ParticipativePanel({ annId }: { annId: string }) {
             {mailErr && <p className="error-text">{mailErr}</p>}
             {ann.collectEmail && subs.length > 0 && (
               <button className="btn btn-ghost btn-sm collect-mail-btn" onClick={() => window.open(mailtoLink(), '_self')}>
-                ✉️ Recevoir le récapitulatif par e-mail
+                <IconMail size={14} /> Recevoir le récapitulatif par e-mail
               </button>
             )}
           </div>

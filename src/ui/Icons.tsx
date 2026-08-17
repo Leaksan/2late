@@ -390,6 +390,38 @@ export function IconLogo(p: P) {
   );
 }
 
+export function IconRotate(p: P) {
+  const { size = 20 } = p;
+  return (
+    <svg {...base(size)}>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
+export function IconMail(p: P) {
+  const { size = 20 } = p;
+  return (
+    <svg {...base(size)}>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="m3.5 7 8.5 6 8.5-6" />
+    </svg>
+  );
+}
+
+export function IconTrophy(p: P) {
+  const { size = 20 } = p;
+  return (
+    <svg {...base(size)}>
+      <path d="M8 21h8M12 17v4" />
+      <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+      <path d="M7 6H4a1 1 0 0 0-1 1c0 2.5 1.5 4 4 4" />
+      <path d="M17 6h3a1 1 0 0 1 1 1c0 2.5-1.5 4-4 4" />
+    </svg>
+  );
+}
+
 export function IconWhatsapp(p: P) {
   const { size = 20 } = p;
   return (

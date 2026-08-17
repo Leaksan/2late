@@ -259,7 +259,7 @@ export function PublishScreen({ onDone, onCancel }: { onDone: (id: string) => vo
             </button>
             {(['DAILY', 'WEEKLY', 'MONTHLY'] as RepeatKind[]).map(r => (
               <button type="button" key={r} className={cx('chip', repeat === r && 'on')} onClick={() => setRepeat(r)}>
-                🔄 {REPEAT_LABELS[r]}
+                {REPEAT_LABELS[r]}
               </button>
             ))}
           </div>

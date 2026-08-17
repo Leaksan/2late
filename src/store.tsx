@@ -37,6 +37,7 @@ interface Store {
   setRoomAccess(roomId: string, userId: string, granted: boolean): string | null;
   upsertScheduleSlot(slot: ScheduleSlot): void;
   deleteScheduleSlot(slotId: string): void;
+  updateSubject(id: string, patch: { discipline: string; teacherName: string; room?: string; visioUrl?: string; evalUrl?: string }): string | null;
   upsertMilestone(m: Milestone): void;
   deleteMilestone(id: string): void;
   resetMilestoneReached(id: string): void;
@@ -406,6 +407,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, [mutate]);
 
+  // Modifie une matière enregistrée (ex. changement de prof, intitulé adapté)
+  // et propage le changement à tous les créneaux du pôle qui l'utilisent.
+  const updateSubject = useCallback((id: string, patch: { discipline: string; teacherName: string; room?: string; visioUrl?: string; evalUrl?: string }): string | null => {
+    if (!user) return 'Session expirée.';
+    const discipline = patch.discipline.trim();
+    const teacherName = patch.teacherName.trim();
+    if (!discipline) return 'L’intitulé de la matière est obligatoire.';
+    if (!teacherName) return 'Le nom de l’enseignant est obligatoire.';
+    const subj = db.subjects.find(s => s.id === id);
+    if (!subj) return 'Matière introuvable.';
+    const clean = { discipline, teacherName, room: patch.room?.trim() || undefined, visioUrl: patch.visioUrl?.trim() || undefined, evalUrl: patch.evalUrl?.trim() || undefined };
+    const duplicate = db.subjects.some(s => s.id !== id && s.pole === subj.pole && s.discipline.toLowerCase() === discipline.toLowerCase());
+    if (duplicate) return `« ${discipline} » existe déjà pour le pôle ${subj.pole}.`;
+    mutate(d => {
+      const target = d.subjects.find(s => s.id === id);
+      if (!target) return;
+      const oldDiscipline = target.discipline;
+      Object.assign(target, clean);
+      for (const slot of d.scheduleSlots) {
+        if (slot.pole === target.pole && slot.discipline === oldDiscipline) {
+          slot.discipline = target.discipline;
+          slot.teacherName = target.teacherName;
+          slot.room = target.room;
+          slot.visioUrl = target.visioUrl;
+          slot.evalUrl = target.evalUrl;
+        }
+      }
+    });
+    return null;
+  }, [user, db.subjects, mutate]);
+
   const upsertMilestone = useCallback((m: Milestone) => {
     mutate(d => {
       const i = d.milestones.findIndex(x => x.id === m.id);
@@ -570,9 +602,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     db, user, login, register, logout, publish, markRead, vote, addComment,
     applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser,
     setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken,
-    sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot,
+    sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, updateSubject,
   upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail, setWhatsapp, resetDemoData
-  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail, setWhatsapp, resetDemoData]);
+  }), [db, user, login, register, logout, publish, markRead, vote, addComment, applyRelais, decideApplication, createProf, deleteAnnouncement, deleteComment, deleteUser, setUserDisabled, setRelaisStatus, setReliability, createResetLink, consumeResetToken, sendChatMessage, softDeleteChatMessage, toggleChatReaction, markRoomVisited, setRoomAccess, upsertScheduleSlot, deleteScheduleSlot, updateSubject, upsertMilestone, deleteMilestone, resetMilestoneReached, upsertCourseNote, deleteCourseNote, addSyllabusDoc, deleteSyllabusDoc, addGrade, deleteGrade, submitToAnnouncement, deleteSubmission, setCollectAccess, setCollectEmail, setWhatsapp, resetDemoData]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

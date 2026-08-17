@@ -50,7 +50,7 @@ function InstallCard() {
             </div>
 
             <div className="install-os">
-              <div className="install-os-title">🤖 Android (Chrome)</div>
+              <div className="install-os-title">Android (Chrome)</div>
               {canInstall ? (
                 <>
                   <p>Votre navigateur propose l’installation directe :</p>
@@ -74,10 +74,10 @@ function InstallCard() {
             </div>
 
             <div className="install-os">
-              <div className="install-os-title">🍎 iPhone / iPad (Safari)</div>
+              <div className="install-os-title">iPhone / iPad (Safari)</div>
               <ol className="install-steps">
                 <li>Ouvrez 2late dans <b>Safari</b> (obligatoire : pas depuis Chrome).</li>
-                <li>Appuyez sur le bouton <b>Partager</b> <span className="share-ico">⬆︎</span> en bas de l’écran.</li>
+                <li>Appuyez sur le bouton <b>Partager</b> (carré avec une flèche) en bas de l’écran.</li>
                 <li>Faites défiler puis choisissez <b>« Sur l’écran d’accueil »</b>.</li>
                 <li>Appuyez sur <b>« Ajouter »</b> — l’app 2late s’ouvrira en plein écran.</li>
               </ol>

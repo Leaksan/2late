@@ -3,7 +3,7 @@ import { REPEAT_LABELS } from '../types';
 import { commentsOf, isExpired, isReadNow, reliabilityOfAnn, userById } from '../data/db';
 import { useStore } from '../store';
 import { cx, timeAgo } from '../utils';
-import { IconChat, IconClock, IconLink } from '../ui/Icons';
+import { IconChat, IconClock, IconLink, IconRotate } from '../ui/Icons';
 import { ReliabilityBadge, RoleBadge, TypeBadge, UrgentBadge, stripeColor } from './Badges';
 
 interface Props {
@@ -49,12 +49,12 @@ export function AnnouncementCard({ ann, onOpen }: Props) {
           <TypeBadge ann={ann} />
           {isParticipative && (
             isCollector ? (
-              nbSubs > 0 && <span className="badge badge-reliable">📥 {nbSubs} dépôt{nbSubs > 1 ? 's' : ''} à récupérer</span>
+              nbSubs > 0 && <span className="badge badge-reliable">{nbSubs} dépôt{nbSubs > 1 ? 's' : ''} à récupérer</span>
             ) : (
-              <span className="badge badge-participative">📥 Je dépose mes documents</span>
+              <span className="badge badge-participative">Je dépose mes documents</span>
             )
           )}
-          {ann.repeat && !expired && <span className="badge badge-repeat">🔄 {REPEAT_LABELS[ann.repeat]}</span>}
+          {ann.repeat && !expired && <span className="badge badge-repeat"><IconRotate size={11} /> {REPEAT_LABELS[ann.repeat]}</span>}
           {isRelais && <ReliabilityBadge pct={rel.pct} total={rel.total} />}
           {expired ? (
             <span className="badge badge-off">Expirée</span>

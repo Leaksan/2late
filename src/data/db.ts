@@ -227,10 +227,12 @@ export function seedDB(): DB {
         room: stiRooms[(stiN - 1) % stiRooms.length],
         visioUrl: `https://meet.google.com/sti-${stiN}`,
         evalUrl: `https://moodle.univ.ga/mod/quiz/view.php?id=sti-${stiN}`,
+        // Liens de groupes VOLONTAIREMENT consultables (example.com) pour que la
+        // démo du choix de groupe aboutisse à une page qui charge.
         evalLinks: stiN === 1
           ? [
-              { group: 'Groupe 1', url: 'https://moodle.univ.ga/mod/quiz/view.php?id=sti-1-g1' },
-              { group: 'Groupe 2', url: 'https://moodle.univ.ga/mod/quiz/view.php?id=sti-1-g2' }
+              { group: 'Groupe 1', url: 'https://example.com/eval/sti-1/groupe-1' },
+              { group: 'Groupe 2', url: 'https://example.com/eval/sti-1/groupe-2' }
             ]
           : undefined,
         // Démo : évaluation démarrée il y a 25 min, durée 2 h — chrono visible.
@@ -275,20 +277,20 @@ export function seedDB(): DB {
     {
       id: 'ms-10',
       threshold: 10,
-      title: '🎉 {n} membres !',
-      message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Chaque inscription rend l’information plus fiable et plus rapide pour tout le campus. Merci de votre confiance — ensemble, rien n’arrive trop tard. 💙'
+      title: '{n} membres !',
+      message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Chaque inscription rend l’information plus fiable et plus rapide pour tout le campus. Merci de votre confiance — ensemble, rien n’arrive trop tard.'
     },
     {
       id: 'ms-50',
       threshold: 50,
-      title: '🎉 {n} membres !',
-      message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Chaque inscription rend l’information plus fiable et plus rapide pour tout le campus. Merci de votre confiance — ensemble, rien n’arrive trop tard. 💙'
+      title: '{n} membres !',
+      message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Chaque inscription rend l’information plus fiable et plus rapide pour tout le campus. Merci de votre confiance — ensemble, rien n’arrive trop tard.'
     },
     {
       id: 'ms-100',
       threshold: 100,
-      title: '🏆 {n} membres !',
-      message: 'Merci à vous ! 2late dépasse les {n} membres. Ce qui a commencé par des annonces perdues dans les groupes WhatsApp est devenu une vraie communauté. Merci de votre confiance — ensemble, rien n’arrive trop tard. 💙'
+      title: '{n} membres !',
+      message: 'Merci à vous ! 2late dépasse les {n} membres. Ce qui a commencé par des annonces perdues dans les groupes WhatsApp est devenu une vraie communauté. Merci de votre confiance — ensemble, rien n’arrive trop tard.'
     }
   ];
 
@@ -434,13 +436,20 @@ export function loadDB(): DB {
             if (!u.whatsapp) u.whatsapp = freshUsers.get(u.id)?.whatsapp;
           }
         }
-        // Démo éval chronométrée : si la fenêtre semée est expirée depuis longtemps
-        // et que les liens sont encore ceux de la démo, on la repositionne sur « en cours »
-        // pour que les groupes restent démontrables.
+        // Démo éval chronométrée : on remplace les liens de démo (les anciens
+        // pointaient vers un domaine inexistant) et on repositionne la fenêtre
+        // sur « en cours » si elle est expirée depuis longtemps, pour que les
+        // groupes restent démontrables.
         for (const s of parsed.scheduleSlots) {
-          const isDemoEval = s.id === 'sti-1' && s.evalStartsAt && s.evalMinutes &&
-            s.evalLinks?.length === 2 && s.evalLinks.every(l => l.url.includes('sti-1-g'));
-          if (isDemoEval && Date.now() > Date.parse(s.evalStartsAt!) + 6 * 3600_000) {
+          const isDemoEval = s.id === 'sti-1' && s.evalLinks?.length === 2 &&
+            s.evalLinks.every(l => /sti-1[-/]g/i.test(l.url));
+          if (!isDemoEval) continue;
+          const demo = seedDB().scheduleSlots.find(x => x.id === 'sti-1');
+          if (demo?.evalLinks) {
+            s.evalLinks = demo.evalLinks;
+            s.evalMinutes = demo.evalMinutes;
+          }
+          if (s.evalStartsAt && Date.now() > Date.parse(s.evalStartsAt) + 6 * 3600_000) {
             s.evalStartsAt = new Date(Date.now() - 10 * 60_000).toISOString();
           }
         }

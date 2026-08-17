@@ -10,7 +10,7 @@ import { CHAT_ROOMS, defaultRoomAccess, roomAccessOf, roomParticipants } from '.
 import type { ChatRoomInfo } from '../data/chatTypes';
 import { useStore } from '../store';
 import { cx, formatDateTime, initials, timeAgo } from '../utils';
-import { IconChat, IconCheckCircle, IconChevronDown, IconClock, IconClose, IconGauge, IconLink, IconMegaphone, IconUsers, IconVideo } from '../ui/Icons';
+import { IconChat, IconCheckCircle, IconChevronDown, IconClock, IconClose, IconGauge, IconLink, IconMegaphone, IconRotate, IconUsers, IconVideo } from '../ui/Icons';
 import { ReliabilityBadge, RoleBadge } from '../components/Badges';
 
 type AdminTab = 'overview' | 'announcements' | 'users' | 'applications' | 'comments' | 'rooms' | 'milestones';
@@ -56,8 +56,8 @@ function MilestonesAdmin() {
         onClick={() => upsertMilestone({
           id: uid('ms'),
           threshold: (db.milestones.at(-1)?.threshold ?? 10) * 2,
-          title: '🎉 {n} membres !',
-          message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Merci de votre confiance — ensemble, rien n’arrive trop tard. 💙'
+          title: '{n} membres !',
+          message: 'Merci à vous ! La communauté 2late vient d’atteindre {n} membres. Merci de votre confiance — ensemble, rien n’arrive trop tard.'
         })}
       >
         + Ajouter un palier
@@ -87,7 +87,7 @@ function MilestoneRow({ m, count, onSave, onDelete, onReset }: {
   const save = () => {
     const t = Number(threshold);
     if (!Number.isInteger(t) || t <= 0) return;
-    onSave({ ...m, threshold: t, title: title.trim() || '🎉 {n} membres !', message: message.trim() });
+    onSave({ ...m, threshold: t, title: title.trim() || '{n} membres !', message: message.trim() });
     setDirty(false);
   };
 
@@ -475,7 +475,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                           <IconClock size={11} /> programmée · {new Date(ann.publishAt!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} {new Date(ann.publishAt!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
-                      {ann.repeat && <span className="badge badge-repeat">🔄 {REPEAT_LABELS[ann.repeat]}</span>}
+                      {ann.repeat && <span className="badge badge-repeat"><IconRotate size={11} /> {REPEAT_LABELS[ann.repeat]}</span>}
                       {author?.role === 'RELAIS' && <ReliabilityBadge pct={rel.pct} total={rel.total} />}
                       {isExpired(ann) ? (
                         <span className="badge badge-off">Expirée</span>

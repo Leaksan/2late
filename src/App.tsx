@@ -15,7 +15,7 @@ import { ScheduleScreen } from './screens/ScheduleScreen';
 import { SyllabusScreen } from './screens/SyllabusScreen';
 import { GradesScreen } from './screens/GradesScreen';
 import { mentionPending, totalUnread } from './data/chat';
-import { IconBell, IconBook, IconCalendar, IconChat, IconGauge, IconLogo, IconUser } from './ui/Icons';
+import { IconBell, IconBook, IconCalendar, IconChat, IconGauge, IconLogo, IconTrophy, IconUser } from './ui/Icons';
 import { cx } from './utils';
 import type { Milestone } from './types';
 
@@ -54,10 +54,10 @@ function MilestonePopup() {
   return (
     <div className="modal-overlay" style={{ zIndex: 200 }} onClick={e => { if (e.target === e.currentTarget) dismiss(); }}>
       <div className="modal ms-modal" role="dialog" aria-modal="true">
-        <div className="ms-emoji">🎉</div>
+        <div className="ms-emoji"><IconTrophy size={34} /></div>
         <h2 className="ms-title">{active.title.replace(/\{n\}/g, String(active.threshold))}</h2>
         <p className="ms-message">{active.message.replace(/\{n\}/g, String(active.threshold))}</p>
-        <button className="btn btn-primary btn-block" onClick={dismiss}>Merci à tous 💙</button>
+        <button className="btn btn-primary btn-block" onClick={dismiss}>Merci à tous</button>
       </div>
     </div>
   );
