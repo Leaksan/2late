@@ -43,6 +43,25 @@ cd backend && python -m pytest
 cd frontend && npm test
 ```
 
+CI (`.github/workflows/ci.yml`) lance ces deux suites à chaque push / PR.
+
+## GitHub Actions / Pages
+
+L’ancien workflow déployait une PWA 100 % client. **Ça ne suffit plus** :
+
+| Job | Rôle |
+|---|---|
+| `CI` | `pytest` (Flask) + `npm test` / `npm run build` (React) |
+| `Deploy frontend to GitHub Pages` | Construit `frontend/` (plus la racine) et publie `frontend/dist` |
+
+**GitHub Pages n’exécute pas Flask.** Le site `*.github.io/2late/` n’est que le SPA. Pour que login / feed / fichiers marchent en ligne, il faut un backend hébergé (Render, Fly, un VPS…) et le secret de dépôt :
+
+```
+VITE_API_BASE=https://votre-api.example.com
+```
+
+En local, `VITE_API_BASE` reste vide : le proxy Vite et Flask (`wsgi.py` + `frontend/dist`) parlent en same-origin `/api`.
+
 ## Architecture
 
 ```

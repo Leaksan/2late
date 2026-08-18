@@ -1,5 +1,11 @@
 const TOKEN_KEY = "2late.token";
 
+/** Prefix API calls. Empty = same origin (Flask or Vite proxy). */
+export function apiUrl(path: string, apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? ""): string {
+  const base = (apiBase || "").replace(/\/$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -39,12 +45,12 @@ function headers(extra?: HeadersInit): Headers {
 }
 
 export async function apiGet<T = any>(path: string): Promise<T> {
-  return parse(await fetch(path, { headers: headers() }));
+  return parse(await fetch(apiUrl(path), { headers: headers() }));
 }
 
 export async function apiSend<T = any>(path: string, method: string, body?: unknown): Promise<T> {
   return parse(
-    await fetch(path, {
+    await fetch(apiUrl(path), {
       method,
       headers: headers({ "Content-Type": "application/json" }),
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -53,7 +59,7 @@ export async function apiSend<T = any>(path: string, method: string, body?: unkn
 }
 
 export async function apiUpload<T = any>(path: string, form: FormData): Promise<T> {
-  return parse(await fetch(path, { method: "POST", headers: headers(), body: form }));
+  return parse(await fetch(apiUrl(path), { method: "POST", headers: headers(), body: form }));
 }
 
 export function fileUrl(path: string): string {
@@ -64,7 +70,7 @@ export function fileUrl(path: string): string {
 }
 
 export async function apiBlob(path: string): Promise<Blob> {
-  const res = await fetch(path, { headers: headers() });
+  const res = await fetch(apiUrl(path), { headers: headers() });
   if (!res.ok) {
     let msg = `Erreur ${res.status}`;
     try {
