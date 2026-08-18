@@ -1,33 +1,87 @@
 import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
 import { ReliabilityBadge, RoleBadge, TypeBadge, UrgentBadge } from "@/components/RoleBadges";
+import { InboxSkeleton } from "@/components/states/InboxSkeleton";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { apiBlob } from "@/lib/api";
+import { announce } from "@/lib/announce";
+import { routeTitle } from "@/app/routes";
 import { formatExactSendTime, isExpired, stripeColor } from "@/lib/domain";
 import type { Announcement, CollectAccess } from "@/lib/types";
 import { COLLECT_ACCESS_LABELS } from "@/lib/types";
 import { formatSize, initials, timeAgo, timeLeft } from "@/lib/utils";
 import { useStore } from "@/store";
-import { ChevronLeft, Download, Send, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Download, MessageCircle, Send, ThumbsDown, ThumbsUp } from "lucide-react";
 
-export function DetailScreen({ id, onBack }: { id: string; onBack: () => void }) {
+const BACK_LABEL: Record<string, string> = {
+  admin: "Admin",
+  plus: "Plus",
+  schedule: "Planning",
+  today: "Aujourd’hui",
+};
+
+export function DetailScreen({
+  id,
+  onBack,
+  from,
+  hideBack,
+}: {
+  id: string;
+  onBack: () => void;
+  from?: string;
+  hideBack?: boolean;
+}) {
   const { user, announcement, vote, comment, submitFile, deleteSubmission, setCollectAccess, setCollectEmail } = useStore();
   const [ann, setAnn] = useState<Announcement | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [pending, setPending] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [mailValue, setMailValue] = useState<string | null>(null);
   const [mailErr, setMailErr] = useState<string | null>(null);
+  const [dropId, setDropId] = useState<string | null>(null);
 
-  const reload = () => void announcement(id).then(setAnn);
+  const reload = (announceRead = false) =>
+    void announcement(id)
+      .then((a) => {
+        setAnn(a);
+        setLoadErr(null);
+        document.title = routeTitle({ name: "detail", annId: id, query: {} }, { announcementTitle: a.title, urgent: a.priority === "URGENTE" });
+        if (announceRead) announce("Marquée comme lue");
+      })
+      .catch((e) => setLoadErr(e?.message || "Introuvable"));
+
   useEffect(() => {
-    reload();
+    setAnn(null);
+    setLoadErr(null);
+    reload(true);
   }, [id]);
 
-  if (!ann || !user) return null;
+  if (!user) return null;
+  if (loadErr) {
+    return (
+      <div className="screen pt-3">
+        {!hideBack && <PageHeader title="Annonce" onBack={onBack} backLabel={BACK_LABEL[from || "today"]} />}
+        <ErrorState title="Impossible d’ouvrir l’annonce" description={loadErr} onRetry={onBack} />
+      </div>
+    );
+  }
+  if (!ann) {
+    return (
+      <div className="screen pt-3">
+        {!hideBack && <PageHeader title="Annonce" onBack={onBack} backLabel={BACK_LABEL[from || "today"]} />}
+        <InboxSkeleton rows={3} />
+      </div>
+    );
+  }
+
   const author = ann.author;
   const rel = ann.reliability;
 
@@ -50,9 +104,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
 
   return (
     <div className="screen pt-3">
-      <Button variant="outline" size="icon" className="mb-4" onClick={onBack} aria-label="Retour">
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
+      {!hideBack && <PageHeader title="" onBack={onBack} backLabel={BACK_LABEL[from || "today"]} subtitle={BACK_LABEL[from || "today"]} />}
       <Card className="relative overflow-hidden p-5">
         <div className="absolute bottom-0 left-0 top-0 w-[5px]" style={{ background: stripeColor(author?.role ?? "ETUDIANT") }} />
         <div className="flex flex-wrap gap-1.5">
@@ -61,8 +113,8 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           <TypeBadge ann={ann} />
           {author?.role === "RELAIS" && <ReliabilityBadge pct={rel.pct} total={rel.total} overridden={rel.overridden} />}
         </div>
-        <h1 className="mt-3 text-[21px] font-bold leading-snug">{ann.title}</h1>
-        <p className="mt-3 whitespace-pre-wrap text-[15px] text-muted-foreground">{ann.description || "Pas d’information complémentaire pour cette annonce."}</p>
+        <h1 className="mt-3 text-title leading-snug">{ann.title}</h1>
+        <p className="mt-3 whitespace-pre-wrap text-body text-card-foreground">{ann.description || "Pas d’information complémentaire pour cette annonce."}</p>
         {ann.expiresAt && (
           <p className="mt-3 text-xs text-muted-foreground">{isExpired(ann) ? "Cette annonce temporaire a expiré." : `Annonce temporaire — ${timeLeft(ann.expiresAt)}.`}</p>
         )}
@@ -100,7 +152,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                 <DropdownMenuContent>
                   <DropdownMenuLabel>Droit de télécharger</DropdownMenuLabel>
                   {(["AUTHOR", "PROF", "RELAIS"] as CollectAccess[]).map((a) => (
-                    <DropdownMenuItem key={a} onClick={() => void setCollectAccess(ann.id, a).then(reload)}>
+                    <DropdownMenuItem key={a} onClick={() => void setCollectAccess(ann.id, a).then(() => reload())}>
                       {COLLECT_ACCESS_LABELS[a]}
                     </DropdownMenuItem>
                   ))}
@@ -120,7 +172,14 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                 )}
               </span>
               {mailValue === null ? (
-                <Button variant="ghost" size="sm" onClick={() => { setMailValue(ann.collectEmail ?? user.email); setMailErr(null); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMailValue(ann.collectEmail ?? user.email);
+                    setMailErr(null);
+                  }}
+                >
                   {ann.collectEmail ? "Modifier" : "Activer"}
                 </Button>
               ) : (
@@ -144,28 +203,29 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                   </Button>
                 </span>
               )}
-              {mailErr && <p className="w-full text-sm text-red-400">{mailErr}</p>}
+              {mailErr && <p className="w-full text-sm text-destructive">{mailErr}</p>}
             </div>
           )}
           {ann.canSubmit && (
-            <div className="mb-4 rounded-2xl border border-dashed border-border p-3">
+            <label className="mb-4 flex min-h-11 cursor-pointer flex-col rounded-lg border border-dashed border-border p-3">
               <p className="mb-2 text-sm text-muted-foreground">PDF, image, document — 20 Mo max. Classé à votre nom avec l’heure d’envoi.</p>
               <input type="file" onChange={(e) => setPending(e.target.files?.[0] ?? null)} />
               {pending && (
                 <Button
                   className="mt-2"
-                  onClick={async () => {
-                    const e = await submitFile(ann.id, pending);
-                    setErr(e);
-                    if (!e) setPending(null);
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const er = await submitFile(ann.id, pending);
+                    setErr(er);
+                    if (!er) setPending(null);
                     reload();
                   }}
                 >
                   <Send className="h-4 w-4" /> Envoyer
                 </Button>
               )}
-              {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
-            </div>
+              {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
+            </label>
           )}
           {(ann.submissions || []).map((s) => (
             <div key={s.id} className="flex items-center gap-3 border-t border-border py-3">
@@ -184,7 +244,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                 </Button>
               )}
               {s.userId === user.id && (
-                <Button variant="ghost" size="sm" className="text-red-400" onClick={() => void deleteSubmission(s.id).then(reload)}>
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDropId(s.id)}>
                   Retirer
                 </Button>
               )}
@@ -200,16 +260,16 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
             <ReliabilityBadge pct={rel.pct} total={rel.total} overridden={rel.overridden} />
           </div>
           {rel.total > 0 && (
-            <div className="my-3 h-2 overflow-hidden rounded-full bg-red-900/60">
-              <div className="h-full bg-emerald-400" style={{ width: `${rel.pct ?? 0}%` }} />
+            <div className="my-3 h-2 overflow-hidden rounded-full bg-destructive/20">
+              <div className="h-full bg-emerald-500" style={{ width: `${rel.pct ?? 0}%` }} />
             </div>
           )}
           {ann.canVote ? (
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button variant={ann.myVote === 1 ? "default" : "outline"} onClick={() => void vote(ann.id, 1).then(reload)}>
+              <Button variant={ann.myVote === 1 ? "default" : "outline"} onClick={() => void vote(ann.id, 1).then(() => reload())}>
                 <ThumbsUp className="h-4 w-4" /> Fiable
               </Button>
-              <Button variant={ann.myVote === -1 ? "destructive" : "outline"} onClick={() => void vote(ann.id, -1).then(reload)}>
+              <Button variant={ann.myVote === -1 ? "destructive" : "outline"} onClick={() => void vote(ann.id, -1).then(() => reload())}>
                 <ThumbsDown className="h-4 w-4" /> Contester
               </Button>
             </div>
@@ -220,9 +280,10 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
       )}
 
       <div className="mt-6">
-        <h2 className="text-over mb-3 text-muted-foreground">Discussion {ann.comments?.length ? `(${ann.comments.length})` : ""}</h2>
+        <h2 className="mb-3 text-base font-bold">Discussion {ann.comments?.length ? `(${ann.comments.length})` : ""}</h2>
+        {(ann.comments || []).length === 0 && <EmptyState icon={MessageCircle} title="Soyez le premier…" description="Aucun commentaire pour le moment." />}
         {(ann.comments || []).map((c) => (
-          <div key={c.id} className="mb-2 flex gap-3 rounded-2xl border border-border bg-card p-3">
+          <div key={c.id} className="mb-2 flex gap-3 rounded-lg border border-border bg-card p-3">
             <Avatar>
               <AvatarFallback>{initials(c.author?.name ?? "?")}</AvatarFallback>
             </Avatar>
@@ -232,17 +293,36 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                 {c.author && <RoleBadge role={c.author.role} />}
                 <span className="text-xs text-muted-foreground">{timeAgo(c.createdAt)}</span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{c.body}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-card-foreground">{c.body}</p>
             </div>
           </div>
         ))}
         <div className="mt-3 flex gap-2">
-          <Input value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void send()} placeholder="Écrire un commentaire…" />
+          <Input
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            placeholder="Écrire un commentaire…"
+          />
           <Button size="icon" onClick={() => void send()} disabled={!body.trim()} aria-label="Envoyer">
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!dropId}
+        title="Retirer votre fichier envoyé ?"
+        onOpenChange={(o) => !o && setDropId(null)}
+        onConfirm={() => {
+          if (dropId) void deleteSubmission(dropId).then(() => reload());
+        }}
+      />
     </div>
   );
 }

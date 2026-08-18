@@ -10,7 +10,10 @@ import { filterAdminAnnouncements } from "@/lib/domain";
 import type { Announcement, Role, User } from "@/lib/types";
 import { POLES } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/states/EmptyState";
 import { useStore } from "@/store";
+import { Users } from "lucide-react";
 
 export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
   const store = useStore();
@@ -33,6 +36,9 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
   const [role, setRole] = useState<"PROF" | "ADMIN">("PROF");
   const [err, setErr] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [dropAnn, setDropAnn] = useState<Announcement | null>(null);
+  const [dropUser, setDropUser] = useState<User | null>(null);
+  const [dropComment, setDropComment] = useState<string | null>(null);
 
   const reload = () => {
     void store.adminStats().then(setStats);
@@ -109,17 +115,14 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
           <Button
             variant="outline"
             onClick={async () => {
-              const data = await store.adminStats();
-              const blob = new Blob([JSON.stringify(await (await fetch("/api/admin/export", { headers: { Authorization: `Bearer ${localStorage.getItem("2late.token")}` } })).json(), null, 2)], {
-                type: "application/json",
-              });
+              const payload = await store.adminExport();
+              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
               a.download = "2late-export.json";
               a.click();
               URL.revokeObjectURL(url);
-              void data;
             }}
           >
             Exporter les données (JSON)
@@ -178,10 +181,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                       Fiabilité…
                     </button>
                   )}
-                  <button
-                    className="text-red-400"
-                    onClick={() => void store.deleteAnnouncement(ann.id).then(reload)}
-                  >
+                  <button className="text-destructive" onClick={() => setDropAnn(ann)}>
                     Supprimer
                   </button>
                 </div>
@@ -231,7 +231,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                       Lien de réinitialisation
                     </button>
                     <button onClick={() => void store.setDisabled(u.id, !u.disabled).then(reload)}>{u.disabled ? "Réactiver" : "Désactiver"}</button>
-                    <button className="text-red-400" onClick={() => void store.deleteUser(u.id).then(reload)}>
+                    <button className="text-destructive" onClick={() => setDropUser(u)}>
                       Supprimer
                     </button>
                   </div>
@@ -244,6 +244,9 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
 
       {tab === "applications" && (
         <div className="mt-4 space-y-3">
+          {apps.filter((a) => a.status === "PENDING").length === 0 && (
+            <EmptyState icon={Users} title="Aucune candidature" description="Les demandes Relais apparaîtront ici." />
+          )}
           {apps.filter((a) => a.status === "PENDING").map((a) => (
             <Card key={a.id} className="p-4">
               <div className="font-bold">{a.user?.name}</div>
@@ -276,7 +279,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
                     {c.announcementTitle}
                   </button>
                 )}
-                <button className="text-red-400" onClick={() => void store.deleteComment(c.id).then(reload)}>
+                <button className="text-destructive" onClick={() => setDropComment(c.id)}>
                   Supprimer
                 </button>
               </div>
@@ -366,6 +369,31 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!dropAnn}
+        title={dropAnn ? `Supprimer l’annonce « ${dropAnn.title} » ?` : ""}
+        onOpenChange={(o) => !o && setDropAnn(null)}
+        onConfirm={() => {
+          if (dropAnn) void store.deleteAnnouncement(dropAnn.id).then(reload);
+        }}
+      />
+      <ConfirmDialog
+        open={!!dropUser}
+        title={dropUser ? `Supprimer le compte de ${dropUser.name} ? Irréversible.` : ""}
+        onOpenChange={(o) => !o && setDropUser(null)}
+        onConfirm={() => {
+          if (dropUser) void store.deleteUser(dropUser.id).then(reload);
+        }}
+      />
+      <ConfirmDialog
+        open={!!dropComment}
+        title="Supprimer ce commentaire ?"
+        onOpenChange={(o) => !o && setDropComment(null)}
+        onConfirm={() => {
+          if (dropComment) void store.deleteComment(dropComment).then(reload);
+        }}
+      />
 
       <Dialog open={!!link} onOpenChange={() => setLink(null)}>
         <DialogContent>

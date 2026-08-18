@@ -46,7 +46,14 @@ export default {
         sm: "calc(var(--radius) - 8px)",
       },
       fontFamily: {
-        sans: ["Inter", "SF Pro Text", "Segoe UI", "system-ui", "sans-serif"],
+        sans: ["ui-sans-serif", "system-ui", "Segoe UI", "Inter", "sans-serif"],
+      },
+      fontSize: {
+        display: ["1.75rem", { lineHeight: "2rem", fontWeight: "700" }],
+        title: ["1.25rem", { lineHeight: "1.6rem", fontWeight: "700" }],
+        body: ["0.9375rem", { lineHeight: "1.4rem", fontWeight: "400" }],
+        meta: ["0.8125rem", { lineHeight: "1.2rem", fontWeight: "500" }],
+        over: ["0.6875rem", { lineHeight: "1rem", fontWeight: "700", letterSpacing: "0.06em" }],
       },
     },
   },

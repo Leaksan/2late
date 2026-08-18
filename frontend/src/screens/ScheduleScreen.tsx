@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,7 +69,7 @@ function fromSlot(s: Partial<ScheduleSlot> & { pole?: Pole }): SlotDraft {
   };
 }
 
-export function ScheduleScreen() {
+export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotId?: string; openNoteId?: string } = {}) {
   const { user, schedule, openLink, upsertSlot, deleteSlot, upsertNote, deleteNote } = useStore();
   const now = useNow(1000);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
@@ -84,15 +86,9 @@ export function ScheduleScreen() {
   const [dueTime, setDueTime] = useState("23:59");
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const [evalPick, setEvalPick] = useState<ScheduleSlot | null>(null);
-  const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [flashId, setFlashId] = useState<string | null>(null);
-
-  // Défile jusqu'au créneau et le met en évidence (liseré vert 2 s).
-  const scrollToSlot = (id: string) => {
-    slotRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
-    setFlashId(id);
-    window.setTimeout(() => setFlashId(null), 2000);
-  };
+  const [dropSlot, setDropSlot] = useState<string | null>(null);
+  const [dropNote, setDropNote] = useState<string | null>(null);
+  const [dayFocus, setDayFocus] = useState<WeekDay | null>(null);
 
   const reload = () =>
     void schedule(user?.pole ? undefined : viewPole === "ALL" ? undefined : viewPole).then((s) => {
@@ -105,13 +101,23 @@ export function ScheduleScreen() {
     reload();
   }, [viewPole]);
 
+  useEffect(() => {
+    if (!openNoteId || notes.length === 0) return;
+    const n = notes.find((x) => x.id === openNoteId);
+    const s = n ? slots.find((x) => x.id === n.slotId) : undefined;
+    if (s) openNote(s);
+  }, [openNoteId, notes, slots]);
+
+  useEffect(() => {
+    if (!highlightSlotId) return;
+    const el = document.getElementById(`slot-${highlightSlotId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightSlotId, slots]);
+
   if (!user) return null;
   const live = liveSlotOf(slots, new Date(now));
   const next = !live ? nextSlotOf(slots, new Date(now)) : undefined;
   const due = notesDueSoon(notes, now);
-  // Évaluation dont la fenêtre chronométrée est actuellement ouverte.
-  const liveEval = slots.find((s) => s.evalState === "open");
-  const liveEvalEnds = liveEval?.evalStartsAt && liveEval.evalMinutes ? Date.parse(liveEval.evalStartsAt) + liveEval.evalMinutes * 60_000 : 0;
   const grouped = WEEK_DAYS.map((day) => ({ day, items: slots.filter((s) => s.day === day) })).filter((g) => g.items.length);
 
   const openEval = async (s: ScheduleSlot) => {
@@ -157,8 +163,8 @@ export function ScheduleScreen() {
       )}
 
       {due.length > 0 && (
-        <div className="mb-3 rounded-3xl border border-yellow-600/40 bg-yellow-500/10 px-4 py-3">
-          <b className="inline-flex items-center gap-1 text-sm text-yellow-700 dark:text-yellow-200">
+        <div className="mb-3 rounded-3xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3">
+          <b className="inline-flex items-center gap-1 text-sm text-yellow-200">
             <Clock className="h-4 w-4" /> N’oublie pas — échéance dans moins de 48 h
           </b>
           <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
@@ -166,58 +172,83 @@ export function ScheduleScreen() {
               const s = slots.find((x) => x.id === n.slotId);
               const cd = countdown(n.dueAt!, now);
               return (
-                <button key={n.id} className="block w-full cursor-pointer text-left" onClick={() => s && scrollToSlot(s.id)} title="Voir le créneau concerné">
-                  <span className={cd.late ? "text-red-500 dark:text-red-400" : "text-yellow-700 dark:text-yellow-200"}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
-                </button>
+                <div key={n.id}>
+                  <span className={cd.late ? "text-red-400" : "text-yellow-200"}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
+                </div>
               );
             })}
           </div>
         </div>
       )}
 
-      {live && (
-        <button className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-emerald-500/40 bg-emerald-400/10 px-4 py-3 text-left" onClick={() => scrollToSlot(live.id)}>
-          <span className="live-dot" />
-          <div>
-            <b>En cours · {live.discipline}</b>
-            <div className="text-xs text-muted-foreground">
-              {live.start}–{live.end} · {live.teacherName}
-              {live.room ? ` · ${live.room}` : ""}
-            </div>
-          </div>
-        </button>
+      {grouped.length > 0 && (
+        <div className="sticky top-14 z-10 mb-3 flex gap-2 overflow-x-auto bg-background/90 py-2 backdrop-blur">
+          {grouped.map(({ day }) => (
+            <button
+              key={day}
+              type="button"
+              className={cn("h-9 shrink-0 rounded-full border px-3 text-sm font-semibold", dayFocus === day ? "border-primary text-primary" : "border-border")}
+              onClick={() => {
+                setDayFocus(day);
+                document.getElementById(`day-${day}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              {DAY_LABELS[day]}
+            </button>
+          ))}
+        </div>
       )}
 
-      {liveEval && (
-        <button
-          className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-left"
-          onClick={() => scrollToSlot(liveEval.id)}
-        >
-          <Clock className="h-5 w-5 flex-none text-yellow-600 dark:text-yellow-300" />
-          <div>
-            <b className="text-yellow-700 dark:text-yellow-200">Évaluation en cours · {liveEval.discipline}</b>
-            <div className="text-xs text-muted-foreground">
-              fermeture dans <b className="tabular-nums text-yellow-700 dark:text-yellow-200">{evalCountdownLabel(liveEvalEnds, now)}</b> — touchez pour voir le créneau
+      {live && (
+        <div className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="live-dot" />
+            <div>
+              <b>En cours · {live.discipline}</b>
+              <div className="text-xs text-muted-foreground">
+                {live.start}–{live.end} · {live.teacherName}
+                {live.room ? ` · ${live.room}` : ""}
+              </div>
             </div>
           </div>
-        </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {live.hasVisio && (
+              <Button size="sm" variant="outline" disabled={!live.visioOpen || live.coursePostponed} onClick={() => void openLink(live.id, "visio").then((u) => window.open(u, "_blank", "noopener"))}>
+                <Video className="h-3.5 w-3.5" /> Visio
+              </Button>
+            )}
+            {live.hasEval && (
+              <Button size="sm" variant="outline" disabled={live.evalState !== "open" && live.evalState !== "plain"} onClick={() => void openEval(live)}>
+                <BookOpen className="h-3.5 w-3.5" /> Éval
+              </Button>
+            )}
+          </div>
+        </div>
       )}
 
       {!live && next && (
-        <button className="mb-4 block w-full rounded-3xl border border-primary/25 bg-primary/10 px-4 py-3 text-left text-sm" onClick={() => scrollToSlot(next.id)}>
+        <div className="mb-4 rounded-3xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm">
           Prochain cours : <b>{next.discipline}</b> — {DAY_LABELS[next.day]} {next.start}, {next.teacherName}.
-        </button>
+        </div>
+      )}
+
+      {grouped.length === 0 && (
+        <EmptyState
+          icon={BookOpen}
+          title="Semaine vide"
+          description="Aucun créneau pour ce pôle."
+          action={canManage ? { label: "Ajouter un créneau", onClick: () => setForm(fromSlot({ pole: user.pole || "STI", day: "LUNDI", start: "08:00", end: "10:00", visioOpen: true, evalOpen: true })) } : undefined}
+        />
       )}
 
       {grouped.map(({ day, items }) => (
-        <div key={day} className="mb-5">
-          <div className="mb-2 text-over text-muted-foreground">{DAY_LABELS[day]}</div>
+        <div key={day} id={`day-${day}`} className="mb-5">
+          <div className="mb-2 text-over uppercase text-muted-foreground">{DAY_LABELS[day]}</div>
           {items.map((s) => {
             const note = notes.find((n) => n.slotId === s.id);
             const ends = s.evalStartsAt && s.evalMinutes ? Date.parse(s.evalStartsAt) + s.evalMinutes * 60_000 : 0;
             return (
-              <div key={s.id} ref={(el) => { slotRefs.current[s.id] = el; }} className={flashId === s.id ? "slot-flash" : undefined}>
-                <Card className="mb-2 flex gap-3 p-3">
+              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", highlightSlotId === s.id && "ring-2 ring-primary")}>
                 <div className="flex w-14 flex-col items-center justify-center rounded-xl border border-border bg-card-2 py-2 text-center">
                   <b>{s.start}</b>
                   <span className="text-[11px] text-muted-foreground">{s.end}</span>
@@ -275,7 +306,7 @@ export function ScheduleScreen() {
                         <Button size="sm" variant="ghost" onClick={() => { setForm(fromSlot(s)); setFormErr(null); }}>
                           Modifier
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-red-400" onClick={() => void deleteSlot(s.id).then(reload)}>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDropSlot(s.id)}>
                           Suppr.
                         </Button>
                       </>
@@ -289,7 +320,6 @@ export function ScheduleScreen() {
                   )}
                 </div>
               </Card>
-              </div>
             );
           })}
         </div>
@@ -445,7 +475,7 @@ export function ScheduleScreen() {
                 className="text-red-400"
                 onClick={() => {
                   const existing = notes.find((n) => n.slotId === noteSlot?.id);
-                  if (existing) void deleteNote(existing.id).then(() => { setNoteSlot(null); reload(); });
+                  if (existing) setDropNote(existing.id);
                 }}
               >
                 Supprimer
@@ -509,6 +539,29 @@ export function ScheduleScreen() {
           ))}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!dropSlot}
+        title="Supprimer ce créneau ?"
+        body="Le planning du pôle change pour tout le monde."
+        onOpenChange={(o) => !o && setDropSlot(null)}
+        onConfirm={() => {
+          if (dropSlot) void deleteSlot(dropSlot).then(reload);
+        }}
+      />
+      <ConfirmDialog
+        open={!!dropNote}
+        title="Supprimer cette note personnelle ?"
+        onOpenChange={(o) => !o && setDropNote(null)}
+        onConfirm={() => {
+          if (dropNote) {
+            void deleteNote(dropNote).then(() => {
+              setNoteSlot(null);
+              reload();
+            });
+          }
+        }}
+      />
     </div>
   );
 }

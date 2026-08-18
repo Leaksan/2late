@@ -11,9 +11,12 @@ import {
   filterAdminAnnouncements,
   formatExactSendTime,
   isPublished,
+  avgColor,
   liveSlotOf,
   nextSlotOf,
+  nextTodaySlotOf,
   notesDueSoon,
+  splitInbox,
   reliabilityBadge,
   sortAnnouncementsToRead,
   syllabusMatches,
@@ -204,5 +207,66 @@ describe("filterAdminAnnouncements", () => {
     expect(filterAdminAnnouncements(list, "visio", "ALL").map((a) => a.id)).toEqual(["a3"]);
     expect(filterAdminAnnouncements(list, "", "RELAIS").map((a) => a.id)).toEqual(["a3"]);
     expect(filterAdminAnnouncements(list, "pierre", "PROF").map((a) => a.id)).toEqual(["a1"]);
+  });
+});
+
+describe("avgColor", () => {
+  it("returns hsl() tokens, not raw channel vars", () => {
+    expect(avgColor(null)).toBe("hsl(var(--muted-foreground))");
+    expect(avgColor(15)).toBe("var(--green)");
+    expect(avgColor(12)).toBe("hsl(var(--primary))");
+    expect(avgColor(8)).toBe("var(--red)");
+  });
+});
+
+describe("nextTodaySlotOf", () => {
+  it("does not wrap to Monday after the last today slot", () => {
+    const slots: ScheduleSlot[] = [
+      {
+        id: "s-mon",
+        pole: "STI",
+        day: "LUNDI",
+        start: "08:00",
+        end: "10:00",
+        discipline: "Algo",
+        teacherName: "P",
+        hasVisio: false,
+        hasEval: false,
+        evalGroups: [],
+        evalState: "none",
+        visioOpen: true,
+        evalOpen: true,
+        coursePostponed: false,
+        evalPostponed: false,
+        createdAt: "t",
+      },
+    ];
+    const sat = new Date("2026-08-15T18:00:00");
+    expect(sat.getDay()).toBe(6);
+    expect(nextTodaySlotOf(slots, sat)).toBeUndefined();
+    expect(nextSlotOf(slots, sat)?.id).toBe("s-mon");
+  });
+});
+
+describe("splitInbox", () => {
+  const urgent = ann({ id: "u1", authorId: "p", priority: "URGENTE", createdAt: "t", title: "Moodle down", type: "GENERALE" });
+  const other = ann({ id: "n1", authorId: "p", priority: "NORMALE", createdAt: "t", title: "TP stats", type: "DEVOIR" });
+
+  it("puts unread urgents in the stack and not the list", () => {
+    const { urgentStack, inboxList } = splitInbox([urgent, other], "ALL", "", "toRead");
+    expect(urgentStack.map((a) => a.id)).toEqual(["u1"]);
+    expect(inboxList.map((a) => a.id)).toEqual(["n1"]);
+  });
+
+  it("chip Urgent on À lire is the stack, list empty", () => {
+    const { urgentStack, inboxList } = splitInbox([urgent, other], "URGENTE", "", "toRead");
+    expect(urgentStack.map((a) => a.id)).toEqual(["u1"]);
+    expect(inboxList).toEqual([]);
+  });
+
+  it("applies search to the stack", () => {
+    const { urgentStack, inboxList } = splitInbox([urgent, other], "ALL", "Moodle", "toRead");
+    expect(urgentStack.map((a) => a.id)).toEqual(["u1"]);
+    expect(inboxList).toEqual([]);
   });
 });

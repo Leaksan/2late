@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiGet, apiSend, apiUpload, getToken, setToken } from "./lib/api";
+import { classifyError } from "./lib/errors";
 import type {
   Announcement,
   ChatMessage,
@@ -10,11 +11,13 @@ import type {
   Milestone,
   NavBadges,
   Pole,
-  RepeatKind,
   ScheduleSlot,
   SyllabusDoc,
   User,
 } from "./lib/types";
+
+export type FeedCache = { toRead: Announcement[]; seen: Announcement[] };
+export type ScheduleCache = { slots: ScheduleSlot[]; notes: CourseNote[]; canManage: boolean };
 
 interface Store {
   ready: boolean;
@@ -22,10 +25,16 @@ interface Store {
   badges: NavBadges;
   milestones: Milestone[];
   myApplication: { id: string; status: string; createdAt: string } | null;
+  feedCache: FeedCache | null;
+  scheduleCache: ScheduleCache | null;
+  offline: boolean;
+  offlineBlocking: boolean;
   login(email: string, password: string): Promise<string | null>;
   register(name: string, email: string, password: string, pole: Pole): Promise<string | null>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
+  refreshBadges(): Promise<void>;
+  revalidate(): Promise<void>;
   feed(tab: "toRead" | "seen"): Promise<Announcement[]>;
   announcement(id: string): Promise<Announcement>;
   publish(input: Record<string, unknown>): Promise<string | null>;
@@ -33,7 +42,7 @@ interface Store {
   comment(id: string, body: string): Promise<void>;
   rooms(): Promise<ChatRoom[]>;
   roomMessages(id: string): Promise<{ room: ChatRoom; messages: ChatMessage[]; participants: User[]; grantable: User[] }>;
-  sendMessage(roomId: string, body: string, replyToId?: string): Promise<void>;
+  sendMessage(roomId: string, body: string, replyToId?: string): Promise<ChatMessage>;
   deleteMessage(id: string): Promise<void>;
   react(id: string, emoji: string): Promise<void>;
   setRoomAccess(roomId: string, userId: string, granted: boolean): Promise<string | null>;
@@ -60,6 +69,7 @@ interface Store {
   adminMembers(): Promise<User[]>;
   adminApplications(): Promise<any[]>;
   adminComments(): Promise<any[]>;
+  adminExport(): Promise<unknown>;
   decideApp(id: string, approve: boolean): Promise<void>;
   createStaff(name: string, email: string, password: string, role: "PROF" | "ADMIN"): Promise<string | null>;
   setDisabled(id: string, disabled: boolean): Promise<void>;
@@ -77,16 +87,43 @@ const Ctx = createContext<Store | null>(null);
 
 const emptyBadges: NavBadges = { toRead: 0, chatUnread: 0, mentionPending: false, pendingApplications: 0 };
 
+function moveToSeen(cache: FeedCache, id: string): FeedCache {
+  const item = cache.toRead.find((a) => a.id === id);
+  if (!item) return cache;
+  return {
+    toRead: cache.toRead.filter((a) => a.id !== id),
+    seen: [item, ...cache.seen.filter((a) => a.id !== id)],
+  };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [badges, setBadges] = useState<NavBadges>(emptyBadges);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [myApplication, setMyApplication] = useState<Store["myApplication"]>(null);
+  const [feedCache, setFeedCache] = useState<FeedCache | null>(null);
+  const [scheduleCache, setScheduleCache] = useState<ScheduleCache | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [offlineBlocking, setOfflineBlocking] = useState(false);
+  const userRef = useRef<User | null>(null);
+  const feedAt = useRef(0);
+  const badgeFails = useRef(0);
+  userRef.current = user;
+
+  const clearSession = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setBadges(emptyBadges);
+    setFeedCache(null);
+    setScheduleCache(null);
+    setOfflineBlocking(false);
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!getToken()) {
       setUser(null);
+      setOfflineBlocking(false);
       setReady(true);
       return;
     }
@@ -96,39 +133,117 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setBadges(data.badges);
       setMilestones(data.milestones || []);
       setMyApplication(data.myApplication);
-    } catch {
-      setToken(null);
-      setUser(null);
+      if (data.feed?.toRead && data.feed?.seen) {
+        setFeedCache({ toRead: data.feed.toRead, seen: data.feed.seen });
+        feedAt.current = Date.now();
+      }
+      setOffline(false);
+      setOfflineBlocking(false);
+      badgeFails.current = 0;
+    } catch (e) {
+      const kind = classifyError(e);
+      if (kind === "auth") {
+        clearSession();
+      } else {
+        setOffline(true);
+        if (!userRef.current) setOfflineBlocking(true);
+      }
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [clearSession]);
+
+  const refreshBadges = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const b = await apiGet<NavBadges>("/api/nav");
+      setBadges(b);
+      badgeFails.current = 0;
+      setOffline(false);
+    } catch (e) {
+      if (classifyError(e) === "auth") {
+        clearSession();
+        return;
+      }
+      badgeFails.current += 1;
+      if (badgeFails.current >= 2) setOffline(true);
+    }
+  }, [clearSession]);
+
+  const revalidate = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const [toRead, seen, sched] = await Promise.all([
+        apiGet("/api/feed?tab=toRead"),
+        apiGet("/api/feed?tab=seen"),
+        apiGet("/api/schedule"),
+      ]);
+      setFeedCache({ toRead: toRead.announcements, seen: seen.announcements });
+      feedAt.current = Date.now();
+      setScheduleCache({ slots: sched.slots, notes: sched.notes, canManage: sched.canManage });
+      setOffline(false);
+    } catch (e) {
+      if (classifyError(e) === "auth") clearSession();
+      else setOffline(true);
+    }
+  }, [clearSession]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const data = await apiSend("/api/auth/login", "POST", { email, password });
-      setToken(data.token);
-      await refresh();
-      return null;
-    } catch (e: any) {
-      return e.message as string;
-    }
-  }, [refresh]);
+  useEffect(() => {
+    if (!user) return;
+    const id = window.setInterval(() => void refreshBadges(), 30_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void refreshBadges();
+        void revalidate();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    const onOff = () => setOffline(true);
+    const onOn = () => {
+      setOffline(false);
+      void refreshBadges();
+    };
+    window.addEventListener("offline", onOff);
+    window.addEventListener("online", onOn);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("offline", onOff);
+      window.removeEventListener("online", onOn);
+    };
+  }, [user, refreshBadges, revalidate]);
 
-  const register = useCallback(async (name: string, email: string, password: string, pole: Pole) => {
-    try {
-      const data = await apiSend("/api/auth/register", "POST", { name, email, password, pole });
-      setToken(data.token);
-      await refresh();
-      return null;
-    } catch (e: any) {
-      return e.message as string;
-    }
-  }, [refresh]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const data = await apiSend("/api/auth/login", "POST", { email, password });
+        setToken(data.token);
+        await refresh();
+        return null;
+      } catch (e: any) {
+        return e.message as string;
+      }
+    },
+    [refresh],
+  );
+
+  const register = useCallback(
+    async (name: string, email: string, password: string, pole: Pole) => {
+      try {
+        const data = await apiSend("/api/auth/register", "POST", { name, email, password, pole });
+        setToken(data.token);
+        await refresh();
+        return null;
+      } catch (e: any) {
+        return e.message as string;
+      }
+    },
+    [refresh],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -136,10 +251,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-    setToken(null);
-    setUser(null);
-    setBadges(emptyBadges);
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   const value = useMemo<Store>(
     () => ({
@@ -148,12 +261,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       badges,
       milestones,
       myApplication,
+      feedCache,
+      scheduleCache,
+      offline,
+      offlineBlocking,
       login,
       register,
       logout,
       refresh,
-      feed: (tab) => apiGet(`/api/feed?tab=${tab}`).then((d) => d.announcements),
-      announcement: (id) => apiGet(`/api/announcements/${id}`),
+      refreshBadges,
+      revalidate,
+      feed: async (tab) => {
+        const hot = feedCache && Date.now() - feedAt.current < 10_000;
+        if (hot && feedCache) return feedCache[tab];
+        const d = await apiGet(`/api/feed?tab=${tab}`);
+        setFeedCache((c) => ({
+          toRead: tab === "toRead" ? d.announcements : (c?.toRead ?? []),
+          seen: tab === "seen" ? d.announcements : (c?.seen ?? []),
+        }));
+        feedAt.current = Date.now();
+        return d.announcements as Announcement[];
+      },
+      announcement: async (id) => {
+        const data = await apiGet<Announcement>(`/api/announcements/${id}`);
+        const unread = feedCache?.toRead.some((a) => a.id === id);
+        if (unread) {
+          setFeedCache((c) => (c ? moveToSeen(c, id) : c));
+          setBadges((b) => ({ ...b, toRead: Math.max(0, b.toRead - 1) }));
+        }
+        return data;
+      },
       publish: async (input) => {
         try {
           await apiSend("/api/announcements", "POST", input);
@@ -171,9 +308,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       rooms: () => apiGet("/api/rooms").then((d) => d.rooms),
       roomMessages: (id) => apiGet(`/api/rooms/${id}/messages`),
-      sendMessage: async (roomId, body, replyToId) => {
-        await apiSend(`/api/rooms/${roomId}/messages`, "POST", { body, replyToId });
-      },
+      sendMessage: (roomId, body, replyToId) =>
+        apiSend<ChatMessage>(`/api/rooms/${roomId}/messages`, "POST", { body, replyToId }),
       deleteMessage: async (id) => {
         await apiSend(`/api/messages/${id}/delete`, "POST");
       },
@@ -188,7 +324,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return e.message;
         }
       },
-      schedule: (pole) => apiGet(`/api/schedule${pole ? `?pole=${pole}` : ""}`),
+      schedule: async (pole) => {
+        const data = await apiGet(`/api/schedule${pole ? `?pole=${pole}` : ""}`);
+        setScheduleCache({ slots: data.slots, notes: data.notes, canManage: data.canManage });
+        return data;
+      },
       openLink: (slotId, kind, group) =>
         apiGet(`/api/schedule/${slotId}/open?kind=${kind}${group ? `&group=${encodeURIComponent(group)}` : ""}`).then((d) => d.url),
       upsertSlot: async (data) => {
@@ -285,6 +425,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       adminMembers: () => apiGet("/api/admin/members").then((d) => d.members),
       adminApplications: () => apiGet("/api/admin/applications").then((d) => d.applications),
       adminComments: () => apiGet("/api/admin/comments").then((d) => d.comments),
+      adminExport: () => apiGet("/api/admin/export"),
       decideApp: async (id, approve) => {
         await apiSend("/api/relais/decide", "POST", { applicationId: id, approve });
         await refresh();
@@ -326,7 +467,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [ready, user, badges, milestones, myApplication, login, register, logout, refresh],
+    [
+      ready,
+      user,
+      badges,
+      milestones,
+      myApplication,
+      feedCache,
+      scheduleCache,
+      offline,
+      offlineBlocking,
+      login,
+      register,
+      logout,
+      refresh,
+      refreshBadges,
+      revalidate,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

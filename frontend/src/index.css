@@ -4,7 +4,6 @@
 
 @layer base {
   :root {
-    /* ---- Thème clair (par défaut) — design system du partenaire ---- */
     --background: 220 20% 97%;
     --foreground: 222 28% 10%;
     --card: 0 0% 100%;
@@ -27,28 +26,24 @@
     --ring: 212 92% 42%;
     --radius: 1rem;
     --nav-h: 64px;
-
     --bg: #f4f6fa;
     --bg-elev: #ffffff;
-    --text: #12151c;
-    --muted: #4b5568;
-    --faint: #6b7280;
+    --ink: #12151c;
+    --ink-muted: #4b5568;
+    --ink-faint: #6b7280;
     --yellow: #b45309;
     --red: #dc3d3d;
     --green: #0f9f6e;
     --admin: #6d5ae6;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-
-    --topbar-bg: #f4f6fae0;
-    --bottomnav-bg: #fffffff0;
-    --chrome-border: #0f172a14;
-    --nav-faint: #6b7280;
+    --topbar-bg: rgba(244, 246, 250, 0.88);
+    --bottomnav-bg: rgba(255, 255, 255, 0.94);
+    --chrome-border: rgba(15, 23, 42, 0.08);
     --fab-bg: hsl(var(--primary));
     --fab-fg: hsl(var(--primary-foreground));
   }
 
   .dark {
-    /* ---- Thème sombre ---- */
     --background: 220 28% 6%;
     --foreground: 220 33% 96%;
     --card: 220 22% 11%;
@@ -69,21 +64,18 @@
     --border: 218 18% 22%;
     --input: 218 18% 22%;
     --ring: 210 100% 74%;
-
     --bg: #0b0e13;
     --bg-elev: #12161d;
-    --text: #f2f5fa;
-    --muted: #a9b4c4;
-    --faint: #7c899d;
+    --ink: #f2f5fa;
+    --ink-muted: #a9b4c4;
+    --ink-faint: #7c899d;
     --yellow: #e5c100;
     --red: #ff5c5c;
     --green: #3dd68c;
     --admin: #b9a4ff;
-
-    --topbar-bg: #0e1116db;
-    --bottomnav-bg: #11151cf0;
-    --chrome-border: #212936e6;
-    --nav-faint: #7c899d;
+    --topbar-bg: rgba(14, 17, 22, 0.86);
+    --bottomnav-bg: rgba(17, 21, 28, 0.94);
+    --chrome-border: rgba(33, 41, 54, 0.9);
     --fab-bg: hsl(var(--primary));
     --fab-fg: hsl(var(--primary-foreground));
   }
@@ -101,7 +93,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     background: var(--bg);
-    font-family: Inter, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Inter, sans-serif;
   }
 
   :focus-visible {
@@ -110,36 +102,27 @@
   }
 }
 
-/* ---------- Échelle typographique ---------- */
-.text-over {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.text-meta {
-  font-size: 13px;
-  font-weight: 500;
-}
-.text-body {
-  font-size: 15px;
-  font-weight: 400;
-}
-.text-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-.text-display {
-  font-size: 28px;
-  font-weight: 700;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-/* ---------- Chrome de l'app ---------- */
 .screen {
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
-  padding: 16px 16px calc(var(--nav-h) + 24px + var(--safe-bottom));
+  padding: 16px 16px calc(var(--nav-h) + 16px + var(--safe-bottom));
+}
+
+@media (min-width: 1024px) {
+  .screen {
+    padding-bottom: 32px;
+  }
 }
 
 .topbar {
@@ -148,7 +131,6 @@
   z-index: 20;
   background: var(--topbar-bg);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--chrome-border);
 }
 
@@ -158,25 +140,24 @@
   left: 0;
   right: 0;
   z-index: 30;
-  min-height: var(--nav-h);
   background: var(--bottomnav-bg);
   backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--chrome-border);
   padding-bottom: var(--safe-bottom);
+  min-height: var(--nav-h);
 }
 
 .ann-stripe {
   width: 3px;
   border-radius: 4px;
-  min-height: 36px;
   flex: none;
+  min-height: 36px;
 }
 
 .fab {
   position: fixed;
-  right: max(18px, calc(50vw - 380px + 18px));
-  bottom: calc(var(--nav-h) + 20px + var(--safe-bottom));
+  right: 16px;
+  bottom: calc(var(--nav-h) + 16px + var(--safe-bottom));
   z-index: 25;
   width: 56px;
   height: 56px;
@@ -188,11 +169,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 150ms ease, box-shadow 150ms ease;
 }
-.fab:active {
-  transform: scale(0.94);
-}
+
 @media (min-width: 1024px) {
   .fab {
     bottom: 24px;
@@ -219,45 +197,25 @@
   }
 }
 
-/* ---------- Accessibilité ---------- */
-.skip-link {
-  position: fixed;
-  top: -48px;
-  left: 12px;
-  z-index: 200;
-  background: var(--bg-elev);
-  color: var(--text);
-  border: 1px solid var(--chrome-border);
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  transition: top 150ms ease;
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
 }
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 80;
+  border-radius: 8px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .skip-link:focus {
   top: 12px;
-}
-
-/* ---------- Mise en évidence d'un créneau (scroll auto) ---------- */
-.slot-flash {
-  border-radius: var(--radius);
-  animation: slotFlash 2s ease;
-}
-@keyframes slotFlash {
-  0%,
-  60% {
-    box-shadow: 0 0 0 3px var(--green);
-  }
-  100% {
-    box-shadow: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
 }
