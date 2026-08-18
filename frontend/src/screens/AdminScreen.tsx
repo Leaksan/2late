@@ -82,7 +82,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
               <div className="text-3xl font-extrabold">{stats.avgRead == null ? "—" : `${stats.avgRead}%`}</div>
             </Card>
           </div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Répartition par pôle</h3>
+          <h3 className="text-over text-muted-foreground">Répartition par pôle</h3>
           <Card className="p-2">
             {POLES.map((p) => (
               <div key={p} className="flex items-center gap-3 px-3 py-2">
@@ -94,7 +94,7 @@ export function AdminScreen({ onOpen }: { onOpen: (id: string) => void }) {
               </div>
             ))}
           </Card>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Annonces relais contestées</h3>
+          <h3 className="text-over text-muted-foreground">Annonces relais contestées</h3>
           {(stats.contested || []).map((c: any) => (
             <Card key={c.id} className="mb-2 flex items-center justify-between p-3">
               <div>

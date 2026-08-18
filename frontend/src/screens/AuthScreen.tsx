@@ -47,7 +47,7 @@ export function AuthScreen() {
         </p>
       </div>
 
-      <Card className="w-full max-w-[400px] rounded-[24px] bg-[#12161D]">
+      <Card className="w-full max-w-[400px] rounded-[24px] bg-card">
         <CardContent className="pt-6">
           <form onSubmit={submit} className="space-y-4">
             {mode === "register" && (

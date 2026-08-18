@@ -62,7 +62,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
           {author?.role === "RELAIS" && <ReliabilityBadge pct={rel.pct} total={rel.total} overridden={rel.overridden} />}
         </div>
         <h1 className="mt-3 text-[21px] font-bold leading-snug">{ann.title}</h1>
-        <p className="mt-3 whitespace-pre-wrap text-[15px] text-[#C4CEDC]">{ann.description || "Pas d’information complémentaire pour cette annonce."}</p>
+        <p className="mt-3 whitespace-pre-wrap text-[15px] text-muted-foreground">{ann.description || "Pas d’information complémentaire pour cette annonce."}</p>
         {ann.expiresAt && (
           <p className="mt-3 text-xs text-muted-foreground">{isExpired(ann) ? "Cette annonce temporaire a expiré." : `Annonce temporaire — ${timeLeft(ann.expiresAt)}.`}</p>
         )}
@@ -220,7 +220,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
       )}
 
       <div className="mt-6">
-        <h2 className="mb-3 text-base font-bold">Discussion {ann.comments?.length ? `(${ann.comments.length})` : ""}</h2>
+        <h2 className="text-over mb-3 text-muted-foreground">Discussion {ann.comments?.length ? `(${ann.comments.length})` : ""}</h2>
         {(ann.comments || []).map((c) => (
           <div key={c.id} className="mb-2 flex gap-3 rounded-2xl border border-border bg-card p-3">
             <Avatar>
@@ -232,7 +232,7 @@ export function DetailScreen({ id, onBack }: { id: string; onBack: () => void })
                 {c.author && <RoleBadge role={c.author.role} />}
                 <span className="text-xs text-muted-foreground">{timeAgo(c.createdAt)}</span>
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-[#C4CEDC]">{c.body}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{c.body}</p>
             </div>
           </div>
         ))}

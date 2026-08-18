@@ -44,7 +44,7 @@ export function ResetPasswordScreen({ token, onExit }: { token: string; onExit: 
         </div>
         <p className="text-sm text-muted-foreground">Réinitialisation sécurisée de votre mot de passe.</p>
       </div>
-      <Card className="w-full max-w-[400px] bg-[#12161D]">
+      <Card className="w-full max-w-[400px] bg-card">
         <CardContent className="pt-6">
           {mode === "invalid" && (
             <>

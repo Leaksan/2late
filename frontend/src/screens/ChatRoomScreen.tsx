@@ -8,9 +8,13 @@ import { canModerateRoom } from "@/lib/domain";
 import type { ChatMessage, ChatRoom, User } from "@/lib/types";
 import { initials } from "@/lib/utils";
 import { useStore } from "@/store";
-import { ChevronLeft, Lock, Send, Users } from "lucide-react";
+import { ChevronLeft, Lock, Reply, Send, Users } from "lucide-react";
 
 const REACTIONS = ["👍", "❤️", "😂", "😮", "🙏"];
+
+// Seuil de déclenchement de la réponse par glissement (façon WhatsApp).
+const SWIPE_TRIGGER = 60;
+const SWIPE_MAX = 90;
 
 export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () => void }) {
   const { user, roomMessages, sendMessage, deleteMessage, react, setRoomAccess } = useStore();
@@ -24,6 +28,9 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
   const [reply, setReply] = useState<ChatMessage | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [menu, setMenu] = useState<ChatMessage | null>(null);
+  const [swipe, setSwipe] = useState<{ id: string; dx: number } | null>(null);
+  const touchStart = useRef<{ x: number; y: number; horizontal: boolean } | null>(null);
+  const lastSwipeAt = useRef(0);
   const bottom = useRef<HTMLDivElement>(null);
 
   const reload = async () => {
@@ -91,22 +98,66 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
       <main className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
         {msgs.map((m) => {
           const mine = m.authorId === user.id;
+          const dragging = swipe?.id === m.id;
+          const dx = dragging ? swipe.dx : 0;
           return (
             <div
               key={m.id}
-              className={`flex max-w-[86%] gap-2 ${mine ? "ml-auto flex-row-reverse" : ""}`}
+              className={`relative flex max-w-[86%] gap-2 ${mine ? "ml-auto flex-row-reverse" : ""}`}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setMenu(m);
               }}
-              onClick={() => setMenu(m)}
+              onClick={() => {
+                // Un glissement vient d'avoir lieu : on n'ouvre pas le menu.
+                if (Date.now() - lastSwipeAt.current < 400) return;
+                setMenu(m);
+              }}
+              onTouchStart={(e) => {
+                touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, horizontal: false };
+              }}
+              onTouchMove={(e) => {
+                const t = touchStart.current;
+                if (!t) return;
+                const ddx = e.touches[0].clientX - t.x;
+                const ddy = e.touches[0].clientY - t.y;
+                if (!t.horizontal) {
+                  if (Math.abs(ddy) > Math.abs(ddx)) return; // scroll vertical : on ne swipe pas
+                  if (Math.abs(ddx) < 8) return;
+                  t.horizontal = true;
+                }
+                setSwipe({ id: m.id, dx: Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, ddx)) });
+              }}
+              onTouchEnd={() => {
+                if (dragging && Math.abs(dx) > SWIPE_TRIGGER) {
+                  lastSwipeAt.current = Date.now();
+                  setReply(m);
+                }
+                touchStart.current = null;
+                setSwipe(null);
+              }}
             >
+              {dragging && Math.abs(dx) > 20 && (
+                <span
+                  className={`absolute top-1/2 -translate-y-1/2 self-center rounded-full border border-border bg-card p-1.5 text-primary ${dx > 0 ? "-left-9" : "-right-9"}`}
+                  aria-hidden
+                >
+                  <Reply size={14} className={dx > 0 ? "" : "-scale-x-100"} />
+                </span>
+              )}
               {!mine && (
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>{initials(m.author?.name ?? "?")}</AvatarFallback>
                 </Avatar>
               )}
-              <div className={`rounded-2xl border px-3 py-2 ${mine ? "border-primary/40 bg-primary/15" : "border-border bg-card"} ${m.deleted ? "opacity-50" : ""}`}>
+              <div
+                className={`relative w-fit rounded-[22px] border px-3.5 py-2 transition-transform ${mine ? "border-primary/40 bg-primary/15" : "border-border bg-card"} ${m.deleted ? "opacity-50" : ""}`}
+                style={dragging ? { transform: `translateX(${dx * 0.4}px)` } : undefined}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute top-3.5 h-3 w-3 rotate-45 border-inherit bg-inherit ${mine ? "-right-[5px] rounded-tr-[5px] border-r border-t" : "-left-[5px] rounded-tl-[5px] border-l border-t"}`}
+                />
                 {!mine && (
                   <div className="mb-0.5 flex items-center gap-2 text-xs font-bold text-primary">
                     {m.author?.name}
@@ -230,7 +281,7 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
             ))}
             {grantable.length > 0 && (
               <>
-                <div className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Accorder l’accès</div>
+                <div className="pt-2 text-over text-muted-foreground">Accorder l’accès</div>
                 {grantable.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 py-2">
                     <Avatar>

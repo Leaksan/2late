@@ -65,7 +65,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
         {waErr && <p className="mt-1 text-sm text-red-400">{waErr}</p>}
       </Card>
 
-      <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Résultats</h2>
+      <h2 className="mb-2 text-over text-muted-foreground">Résultats</h2>
       <Card className="mb-4 flex items-center gap-3 p-4">
         <GraduationCap className="text-muted-foreground" />
         <div className="flex-1">
@@ -81,7 +81,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
 
       {user.role === "ETUDIANT" && (
         <>
-          <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Statut Relais</h2>
+          <h2 className="mb-2 text-over text-muted-foreground">Statut Relais</h2>
           <Card className="mb-4 flex items-center gap-3 p-4">
             <Megaphone className="text-muted-foreground" />
             <div className="flex-1">
@@ -99,7 +99,7 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
         </>
       )}
 
-      <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Session</h2>
+      <h2 className="mb-2 text-over text-muted-foreground">Session</h2>
       <Card className="flex items-center gap-3 p-4">
         <LogOut className="text-muted-foreground" />
         <div className="flex-1">

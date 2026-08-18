@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -84,6 +84,15 @@ export function ScheduleScreen() {
   const [dueTime, setDueTime] = useState("23:59");
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const [evalPick, setEvalPick] = useState<ScheduleSlot | null>(null);
+  const slotRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [flashId, setFlashId] = useState<string | null>(null);
+
+  // Défile jusqu'au créneau et le met en évidence (liseré vert 2 s).
+  const scrollToSlot = (id: string) => {
+    slotRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFlashId(id);
+    window.setTimeout(() => setFlashId(null), 2000);
+  };
 
   const reload = () =>
     void schedule(user?.pole ? undefined : viewPole === "ALL" ? undefined : viewPole).then((s) => {
@@ -100,6 +109,9 @@ export function ScheduleScreen() {
   const live = liveSlotOf(slots, new Date(now));
   const next = !live ? nextSlotOf(slots, new Date(now)) : undefined;
   const due = notesDueSoon(notes, now);
+  // Évaluation dont la fenêtre chronométrée est actuellement ouverte.
+  const liveEval = slots.find((s) => s.evalState === "open");
+  const liveEvalEnds = liveEval?.evalStartsAt && liveEval.evalMinutes ? Date.parse(liveEval.evalStartsAt) + liveEval.evalMinutes * 60_000 : 0;
   const grouped = WEEK_DAYS.map((day) => ({ day, items: slots.filter((s) => s.day === day) })).filter((g) => g.items.length);
 
   const openEval = async (s: ScheduleSlot) => {
@@ -145,8 +157,8 @@ export function ScheduleScreen() {
       )}
 
       {due.length > 0 && (
-        <div className="mb-3 rounded-3xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3">
-          <b className="inline-flex items-center gap-1 text-sm text-yellow-200">
+        <div className="mb-3 rounded-3xl border border-yellow-600/40 bg-yellow-500/10 px-4 py-3">
+          <b className="inline-flex items-center gap-1 text-sm text-yellow-700 dark:text-yellow-200">
             <Clock className="h-4 w-4" /> N’oublie pas — échéance dans moins de 48 h
           </b>
           <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
@@ -154,9 +166,9 @@ export function ScheduleScreen() {
               const s = slots.find((x) => x.id === n.slotId);
               const cd = countdown(n.dueAt!, now);
               return (
-                <div key={n.id}>
-                  <span className={cd.late ? "text-red-400" : "text-yellow-200"}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
-                </div>
+                <button key={n.id} className="block w-full cursor-pointer text-left" onClick={() => s && scrollToSlot(s.id)} title="Voir le créneau concerné">
+                  <span className={cd.late ? "text-red-500 dark:text-red-400" : "text-yellow-700 dark:text-yellow-200"}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
+                </button>
               );
             })}
           </div>
@@ -164,7 +176,7 @@ export function ScheduleScreen() {
       )}
 
       {live && (
-        <button className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-left">
+        <button className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-emerald-500/40 bg-emerald-400/10 px-4 py-3 text-left" onClick={() => scrollToSlot(live.id)}>
           <span className="live-dot" />
           <div>
             <b>En cours · {live.discipline}</b>
@@ -176,20 +188,36 @@ export function ScheduleScreen() {
         </button>
       )}
 
+      {liveEval && (
+        <button
+          className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-left"
+          onClick={() => scrollToSlot(liveEval.id)}
+        >
+          <Clock className="h-5 w-5 flex-none text-yellow-600 dark:text-yellow-300" />
+          <div>
+            <b className="text-yellow-700 dark:text-yellow-200">Évaluation en cours · {liveEval.discipline}</b>
+            <div className="text-xs text-muted-foreground">
+              fermeture dans <b className="tabular-nums text-yellow-700 dark:text-yellow-200">{evalCountdownLabel(liveEvalEnds, now)}</b> — touchez pour voir le créneau
+            </div>
+          </div>
+        </button>
+      )}
+
       {!live && next && (
-        <div className="mb-4 rounded-3xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm">
+        <button className="mb-4 block w-full rounded-3xl border border-primary/25 bg-primary/10 px-4 py-3 text-left text-sm" onClick={() => scrollToSlot(next.id)}>
           Prochain cours : <b>{next.discipline}</b> — {DAY_LABELS[next.day]} {next.start}, {next.teacherName}.
-        </div>
+        </button>
       )}
 
       {grouped.map(({ day, items }) => (
         <div key={day} className="mb-5">
-          <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{DAY_LABELS[day]}</div>
+          <div className="mb-2 text-over text-muted-foreground">{DAY_LABELS[day]}</div>
           {items.map((s) => {
             const note = notes.find((n) => n.slotId === s.id);
             const ends = s.evalStartsAt && s.evalMinutes ? Date.parse(s.evalStartsAt) + s.evalMinutes * 60_000 : 0;
             return (
-              <Card key={s.id} className="mb-2 flex gap-3 p-3">
+              <div key={s.id} ref={(el) => { slotRefs.current[s.id] = el; }} className={flashId === s.id ? "slot-flash" : undefined}>
+                <Card className="mb-2 flex gap-3 p-3">
                 <div className="flex w-14 flex-col items-center justify-center rounded-xl border border-border bg-card-2 py-2 text-center">
                   <b>{s.start}</b>
                   <span className="text-[11px] text-muted-foreground">{s.end}</span>
@@ -261,6 +289,7 @@ export function ScheduleScreen() {
                   )}
                 </div>
               </Card>
+              </div>
             );
           })}
         </div>

@@ -3,8 +3,52 @@
 @tailwind utilities;
 
 @layer base {
-  :root,
+  :root {
+    /* ---- Thème clair (par défaut) — design system du partenaire ---- */
+    --background: 220 20% 97%;
+    --foreground: 222 28% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 28% 10%;
+    --card-2: 220 16% 94%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 28% 10%;
+    --primary: 212 92% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 20% 20%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 215 12% 38%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 222 28% 10%;
+    --destructive: 0 78% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 212 92% 42%;
+    --radius: 1rem;
+    --nav-h: 64px;
+
+    --bg: #f4f6fa;
+    --bg-elev: #ffffff;
+    --text: #12151c;
+    --muted: #4b5568;
+    --faint: #6b7280;
+    --yellow: #b45309;
+    --red: #dc3d3d;
+    --green: #0f9f6e;
+    --admin: #6d5ae6;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    --topbar-bg: #f4f6fae0;
+    --bottomnav-bg: #fffffff0;
+    --chrome-border: #0f172a14;
+    --nav-faint: #6b7280;
+    --fab-bg: hsl(var(--primary));
+    --fab-fg: hsl(var(--primary-foreground));
+  }
+
   .dark {
+    /* ---- Thème sombre ---- */
     --background: 220 28% 6%;
     --foreground: 220 33% 96%;
     --card: 220 22% 11%;
@@ -25,7 +69,6 @@
     --border: 218 18% 22%;
     --input: 218 18% 22%;
     --ring: 210 100% 74%;
-    --radius: 1.5rem;
 
     --bg: #0b0e13;
     --bg-elev: #12161d;
@@ -36,7 +79,13 @@
     --red: #ff5c5c;
     --green: #3dd68c;
     --admin: #b9a4ff;
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    --topbar-bg: #0e1116db;
+    --bottomnav-bg: #11151cf0;
+    --chrome-border: #212936e6;
+    --nav-faint: #7c899d;
+    --fab-bg: hsl(var(--primary));
+    --fab-fg: hsl(var(--primary-foreground));
   }
 
   * {
@@ -61,20 +110,46 @@
   }
 }
 
+/* ---------- Échelle typographique ---------- */
+.text-over {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.text-meta {
+  font-size: 13px;
+  font-weight: 500;
+}
+.text-body {
+  font-size: 15px;
+  font-weight: 400;
+}
+.text-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+.text-display {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* ---------- Chrome de l'app ---------- */
 .screen {
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 16px 16px calc(88px + var(--safe-bottom));
+  padding: 16px 16px calc(var(--nav-h) + 24px + var(--safe-bottom));
 }
 
 .topbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(14, 17, 22, 0.86);
+  background: var(--topbar-bg);
   backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(33, 41, 54, 0.9);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--chrome-border);
 }
 
 .bottomnav {
@@ -83,40 +158,53 @@
   left: 0;
   right: 0;
   z-index: 30;
-  background: rgba(17, 21, 28, 0.94);
+  min-height: var(--nav-h);
+  background: var(--bottomnav-bg);
   backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(33, 41, 54, 0.9);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--chrome-border);
   padding-bottom: var(--safe-bottom);
 }
 
 .ann-stripe {
-  width: 5px;
+  width: 3px;
   border-radius: 4px;
+  min-height: 36px;
   flex: none;
 }
 
 .fab {
   position: fixed;
-  right: max(18px, calc(50vw - 360px + 18px));
-  bottom: calc(84px + var(--safe-bottom));
+  right: max(18px, calc(50vw - 380px + 18px));
+  bottom: calc(var(--nav-h) + 20px + var(--safe-bottom));
   z-index: 25;
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border-radius: 19px;
-  background: #7cb9ff;
-  color: #0b1220;
+  background: var(--fab-bg);
+  color: var(--fab-fg);
   border: none;
-  box-shadow: 0 8px 28px rgba(124, 185, 255, 0.35);
+  box-shadow: 0 8px 28px hsl(var(--primary) / 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.fab:active {
+  transform: scale(0.94);
+}
+@media (min-width: 1024px) {
+  .fab {
+    bottom: 24px;
+    right: 24px;
+  }
 }
 
 .live-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #3dd68c;
+  background: var(--green);
   flex: none;
   animation: pulse 1.6s infinite;
 }
@@ -128,5 +216,48 @@
   }
   50% {
     opacity: 0.35;
+  }
+}
+
+/* ---------- Accessibilité ---------- */
+.skip-link {
+  position: fixed;
+  top: -48px;
+  left: 12px;
+  z-index: 200;
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--chrome-border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: top 150ms ease;
+}
+.skip-link:focus {
+  top: 12px;
+}
+
+/* ---------- Mise en évidence d'un créneau (scroll auto) ---------- */
+.slot-flash {
+  border-radius: var(--radius);
+  animation: slotFlash 2s ease;
+}
+@keyframes slotFlash {
+  0%,
+  60% {
+    box-shadow: 0 0 0 3px var(--green);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
