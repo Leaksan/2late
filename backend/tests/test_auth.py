@@ -72,6 +72,22 @@ def test_register_duplicate_email(client):
     assert "existe déjà" in r.get_json()["error"]
 
 
+def test_frontend_dist_env_is_honored(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from twolate.app import create_app
+
+    dist = tmp_path / "spa"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html><title>2late</title>", encoding="utf-8")
+    monkeypatch.setenv("TWOLATE_FRONTEND_DIST", str(dist))
+    application = create_app(
+        {"TESTING": True, "DATABASE": str(tmp_path / "env.db"), "UPLOADS": str(tmp_path / "up")}
+    )
+    assert Path(application.static_folder).resolve() == dist.resolve()
+    application.db.close()
+
+
 def test_logout_invalidates_session(client, etu):
     r = client.get("/api/auth/me", headers=etu)
     assert r.status_code == 200

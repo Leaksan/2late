@@ -26,7 +26,8 @@ def create_app(config: dict | None = None) -> Flask:
     instance = backend_root / "instance"
     instance.mkdir(parents=True, exist_ok=True)
 
-    frontend_dist = _repo_root() / "frontend" / "dist"
+    frontend_override = os.environ.get("TWOLATE_FRONTEND_DIST")
+    frontend_dist = Path(frontend_override) if frontend_override else (_repo_root() / "frontend" / "dist")
 
     app = Flask(
         __name__,

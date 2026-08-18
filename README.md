@@ -18,6 +18,27 @@ npm install
 npm run dev             # http://127.0.0.1:5173
 ```
 
+## Docker
+
+Image unique : le SPA Vite est compilé, puis servi par Flask + Gunicorn. SQLite et les uploads vivent dans `/data`.
+
+```bash
+docker compose up --build
+# http://127.0.0.1:5000
+```
+
+Ou sans Compose :
+
+```bash
+docker build -t twolate .
+docker run --rm -p 5000:5000 \
+  -e TWOLATE_SECRET=un-secret-long \
+  -v twolate-data:/data \
+  twolate
+```
+
+En production, définissez `TWOLATE_SECRET`. Le volume `/data` conserve la base et les fichiers.
+
 Build production du client :
 
 ```bash

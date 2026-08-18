@@ -1,0 +1,15 @@
+.git
+.github
+.grok
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**/.DS_Store
+**/.vite
+frontend/node_modules
+frontend/dist
+backend/instance
+backend/.pytest_cache
+*.md
+!README.md
