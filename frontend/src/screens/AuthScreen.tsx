@@ -47,7 +47,7 @@ export function AuthScreen() {
         </p>
       </div>
 
-      <Card className="w-full max-w-[400px] rounded-[24px] bg-[#12161D]">
+      <Card className="w-full max-w-[400px]">
         <CardContent className="pt-6">
           <form onSubmit={submit} className="space-y-4">
             {mode === "register" && (
@@ -58,7 +58,7 @@ export function AuthScreen() {
             )}
             <div className="space-y-2">
               <Label>Adresse e-mail</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="prenom.nom@univ.ga" autoComplete="email" />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="prenom.nom@univ.ga" autoComplete="email" aria-invalid={!!error} />
             </div>
             <div className="space-y-2">
               <Label>Mot de passe</Label>
@@ -92,7 +92,11 @@ export function AuthScreen() {
                 <p className="text-xs text-muted-foreground">{POLE_LABELS[pole]}</p>
               </div>
             )}
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
             <Button className="w-full" type="submit" disabled={busy}>
               {mode === "login" ? "Se connecter" : "Créer mon compte étudiant"}
             </Button>
@@ -117,19 +121,22 @@ export function AuthScreen() {
           </p>
 
           {mode === "login" && (
-            <div className="mt-5 rounded-2xl border border-dashed border-border bg-black/20 p-3">
-              <h4 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted-foreground">Comptes de démonstration</h4>
+            <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/40 p-3">
+              <h4 className="mb-2 text-over uppercase text-muted-foreground">Comptes de démonstration</h4>
               {DEMO.map((d) => (
                 <button
                   key={d.email}
                   type="button"
                   className="flex w-full items-center justify-between border-b border-border/60 py-2 text-left text-[13px] last:border-0"
-                  onClick={() => void login(d.email, d.pwd).then(setError)}
+                  onClick={() => {
+                    setEmail(d.email);
+                    setPassword(d.pwd);
+                  }}
                 >
                   <span>
                     <b className="font-semibold text-foreground">{d.label}</b> — {d.email}
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">{d.pwd}</span>
+                  <span className="font-mono text-xs text-muted-foreground">••••</span>
                 </button>
               ))}
             </div>

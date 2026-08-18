@@ -7,7 +7,6 @@ import { notesDueSoon, stripeColor } from "@/lib/domain";
 import type { Announcement, CourseNote, ScheduleSlot } from "@/lib/types";
 import { DAY_LABELS } from "@/lib/types";
 import { countdown, timeAgo } from "@/lib/utils";
-import { useNow } from "@/hooks/useNow";
 import { useStore } from "@/store";
 import { Bell, Clock, Eye, MessageCircle, Plus } from "lucide-react";
 
@@ -17,7 +16,6 @@ export function FeedScreen({ onOpen, onPublish }: { onOpen: (id: string) => void
   const [list, setList] = useState<Announcement[]>([]);
   const [notes, setNotes] = useState<CourseNote[]>([]);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
-  useNow(1000);
 
   useEffect(() => {
     void feed(tab).then(setList);

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +10,6 @@ import { avgColor, weightedAverage } from "@/lib/domain";
 import type { Grade } from "@/lib/types";
 import { frNum } from "@/lib/utils";
 import { useStore } from "@/store";
-import { ChevronLeft, Plus } from "lucide-react";
 
 export function GradesScreen({ onBack }: { onBack: () => void }) {
   const { grades, addGrade, deleteGrade } = useStore();
@@ -19,6 +20,7 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
   const [value, setValue] = useState("");
   const [coef, setCoef] = useState("1");
   const [error, setError] = useState<string | null>(null);
+  const [dropId, setDropId] = useState<string | null>(null);
 
   const reload = () => void grades().then((d) => setItems(d.grades));
   useEffect(() => {
@@ -40,12 +42,10 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="screen pt-3">
-      <Button variant="outline" size="icon" className="mb-4" onClick={onBack} aria-label="Retour">
-        <ChevronLeft />
-      </Button>
+      <PageHeader title="Mes notes" onBack={onBack} actions={<Button onClick={() => setOpen(true)}>Ajouter</Button>} />
       <Card className="mb-4 p-5 text-center">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Moyenne générale pondérée</div>
-        <div className="mt-2 text-5xl font-extrabold" style={{ color: avgColor(global) }}>
+        <div className="text-over uppercase text-muted-foreground">Moyenne générale pondérée</div>
+        <div className="mt-2 text-display" style={{ color: avgColor(global) }}>
           {global == null ? "—" : frNum(global)}
           <small className="text-lg">/20</small>
         </div>
@@ -69,16 +69,13 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
                 {frNum(grade.value)}
                 <small>/20</small>
               </span>
-              <Button variant="ghost" size="sm" onClick={() => void deleteGrade(grade.id).then(reload)}>
+              <Button variant="ghost" size="sm" onClick={() => setDropId(grade.id)}>
                 ×
               </Button>
             </Card>
           ))}
         </div>
       ))}
-      <button className="fab" onClick={() => setOpen(true)} aria-label="Ajouter une note">
-        <Plus />
-      </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -117,13 +114,21 @@ export function GradesScreen({ onBack }: { onBack: () => void }) {
                 <Input value={coef} onChange={(e) => setCoef(e.target.value)} />
               </div>
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">
               Enregistrer
             </Button>
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!dropId}
+        title="Supprimer cette note ?"
+        onOpenChange={(o) => !o && setDropId(null)}
+        onConfirm={() => {
+          if (dropId) void deleteGrade(dropId).then(reload);
+        }}
+      />
     </div>
   );
 }

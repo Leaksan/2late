@@ -44,7 +44,7 @@ export function ResetPasswordScreen({ token, onExit }: { token: string; onExit: 
         </div>
         <p className="text-sm text-muted-foreground">Réinitialisation sécurisée de votre mot de passe.</p>
       </div>
-      <Card className="w-full max-w-[400px] bg-[#12161D]">
+      <Card className="w-full max-w-[400px]">
         <CardContent className="pt-6">
           {mode === "invalid" && (
             <>
@@ -78,7 +78,11 @@ export function ResetPasswordScreen({ token, onExit }: { token: string; onExit: 
               <label className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Checkbox checked={show} onCheckedChange={(v) => setShow(Boolean(v))} /> Afficher les mots de passe
               </label>
-              {error && <p className="text-sm text-red-400">{error}</p>}
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
               <Button className="w-full" type="submit">
                 Définir mon nouveau mot de passe
               </Button>

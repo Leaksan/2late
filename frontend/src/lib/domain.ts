@@ -213,8 +213,62 @@ export function stripeColor(role: Role): string {
 }
 
 export function avgColor(avg: number | null): string {
-  if (avg == null) return "var(--muted)";
+  if (avg == null) return "hsl(var(--muted-foreground))";
   if (avg >= 14) return "var(--green)";
-  if (avg >= 10) return "var(--primary)";
+  if (avg >= 10) return "hsl(var(--primary))";
   return "var(--red)";
+}
+
+export function nextTodaySlotOf(slots: ScheduleSlot[], now = new Date()): ScheduleSlot | undefined {
+  const today = WEEK_ORDER[(now.getDay() + 6) % 7];
+  const hhmm = now.toTimeString().slice(0, 5);
+  return slots.find((s) => s.day === today && !s.coursePostponed && s.start > hhmm);
+}
+
+export function announcementMatches(ann: Pick<Announcement, "title" | "description"> & { author?: { name?: string } | null }, q: string): boolean {
+  const needle = foldAccents(q.trim());
+  if (!needle) return true;
+  const hay = foldAccents(`${ann.title} ${ann.description ?? ""} ${ann.author?.name ?? ""}`);
+  return hay.includes(needle);
+}
+
+export type FilterId =
+  | "ALL"
+  | "URGENTE"
+  | "EVALUATION"
+  | "DEVOIR"
+  | "VISIO"
+  | "GENERALE"
+  | "EMPLOI_DU_TEMPS"
+  | "PARTICIPATIVE"
+  | "RELAIS"
+  | "OFFICIEL";
+
+export const FILTER_PREDICATE: Record<FilterId, (a: Announcement) => boolean> = {
+  ALL: () => true,
+  URGENTE: (a) => a.priority === "URGENTE",
+  EVALUATION: (a) => a.type === "EVALUATION",
+  DEVOIR: (a) => a.type === "DEVOIR",
+  VISIO: (a) => a.type === "VISIO",
+  GENERALE: (a) => a.type === "GENERALE",
+  EMPLOI_DU_TEMPS: (a) => a.type === "EMPLOI_DU_TEMPS",
+  PARTICIPATIVE: (a) => a.type === "PARTICIPATIVE",
+  RELAIS: (a) => a.author?.role === "RELAIS",
+  OFFICIEL: (a) => a.author?.role === "PROF" || a.author?.role === "ADMIN",
+};
+
+export function splitInbox(source: Announcement[], filter: FilterId, q: string, tab: "toRead" | "seen") {
+  const visible = source.filter(FILTER_PREDICATE[filter]).filter((a) => announcementMatches(a, q));
+  const stackIds = new Set(
+    tab === "toRead" && (filter === "ALL" || filter === "URGENTE")
+      ? visible.filter((a) => a.priority === "URGENTE").map((a) => a.id)
+      : [],
+  );
+  const urgentStack = visible.filter((a) => stackIds.has(a.id));
+  const inboxList = filter === "URGENTE" ? [] : visible.filter((a) => !stackIds.has(a.id));
+  return { visible, urgentStack, inboxList };
+}
+
+export function canPublish(user: { role: Role } | null | undefined): boolean {
+  return !!user && (user.role === "PROF" || user.role === "RELAIS" || user.role === "ADMIN");
 }

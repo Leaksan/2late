@@ -1,42 +1,51 @@
 import { useEffect, useRef, useState } from "react";
-import { RoleBadge } from "@/components/RoleBadges";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Composer } from "@/components/chat/Composer";
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { ErrorState } from "@/components/states/ErrorState";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { useKeyboardOpen } from "@/hooks/useKeyboardOpen";
 import { canModerateRoom } from "@/lib/domain";
 import type { ChatMessage, ChatRoom, User } from "@/lib/types";
 import { initials } from "@/lib/utils";
 import { useStore } from "@/store";
-import { ChevronLeft, Lock, Send, Users } from "lucide-react";
+import { ChevronLeft, Lock, Users } from "lucide-react";
 
 const REACTIONS = ["👍", "❤️", "😂", "😮", "🙏"];
 
 export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () => void }) {
-  const { user, roomMessages, sendMessage, deleteMessage, react, setRoomAccess } = useStore();
+  const { user, roomMessages, sendMessage, deleteMessage, react, setRoomAccess, offline } = useStore();
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [people, setPeople] = useState<User[]>([]);
   const [grantable, setGrantable] = useState<User[]>([]);
   const [room, setRoom] = useState<Pick<ChatRoom, "id" | "name" | "kind"> | null>(null);
-  const [roomName, setRoomName] = useState("");
   const [denied, setDenied] = useState(false);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [reply, setReply] = useState<ChatMessage | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [menu, setMenu] = useState<ChatMessage | null>(null);
-  const bottom = useRef<HTMLDivElement>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [revokeUser, setRevokeUser] = useState<User | null>(null);
+  const [sendErr, setSendErr] = useState<string | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const nearBottom = useRef(true);
+  const { keyboardInset } = useKeyboardOpen();
 
   const reload = async () => {
     try {
       const data = await roomMessages(roomId);
-      setMsgs(data.messages);
+      setMsgs((prev) => mergePoll(prev, data.messages));
       setPeople(data.participants);
       setGrantable(data.grantable || []);
       setRoom(data.room);
-      setRoomName(data.room.name);
       setDenied(false);
-    } catch {
-      setDenied(true);
+      setLoadErr(null);
+    } catch (e: any) {
+      if (e?.status === 403) setDenied(true);
+      else setLoadErr(e?.message || "Erreur");
     }
   };
 
@@ -47,7 +56,10 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
   }, [roomId]);
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    if (nearBottom.current) {
+      const el = scroller.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }
   }, [msgs.length]);
 
   if (!user) return null;
@@ -65,95 +77,76 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
       </div>
     );
   }
+  if (loadErr && !room) {
+    return <ErrorState title="Salon indisponible" description={loadErr} onRetry={() => void reload()} />;
+  }
 
   const send = async () => {
-    if (!body.trim()) return;
-    await sendMessage(roomId, body, reply?.id);
+    if (!body.trim() || offline) return;
+    const tmpId = `tmp-${crypto.randomUUID()}`;
+    const tmp: ChatMessage = {
+      id: tmpId,
+      roomId,
+      authorId: user.id,
+      author: user,
+      body,
+      replyToId: reply?.id,
+      deleted: false,
+      reactions: [],
+      createdAt: new Date().toISOString(),
+    };
+    const savedBody = body;
+    const savedReply = reply?.id;
+    setMsgs((m) => [...m, tmp]);
     setBody("");
     setReply(null);
-    reload();
+    setSendErr(null);
+    try {
+      const created = await sendMessage(roomId, savedBody, savedReply);
+      setMsgs((m) => m.map((x) => (x.id === tmpId ? created : x)));
+    } catch {
+      setMsgs((m) => m.filter((x) => x.id !== tmpId));
+      setBody(savedBody);
+      setSendErr("Envoi impossible. Réessayez.");
+    }
   };
 
   return (
-    <div className="mx-auto flex h-dvh max-w-[720px] flex-col">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[760px] flex-col">
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
         <Button variant="outline" size="icon" onClick={onBack} aria-label="Retour">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="font-bold">{roomName}</div>
+          <div className="font-bold">{room?.name ?? "Salon"}</div>
           <div className="text-xs text-muted-foreground">{people.length} membres</div>
         </div>
         <Button variant="outline" size="icon" onClick={() => setMembersOpen(true)} aria-label="Membres">
           <Users className="h-4 w-4" />
         </Button>
       </header>
-      <main className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
-        {msgs.map((m) => {
-          const mine = m.authorId === user.id;
-          return (
-            <div
-              key={m.id}
-              className={`flex max-w-[86%] gap-2 ${mine ? "ml-auto flex-row-reverse" : ""}`}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setMenu(m);
-              }}
-              onClick={() => setMenu(m)}
-            >
-              {!mine && (
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{initials(m.author?.name ?? "?")}</AvatarFallback>
-                </Avatar>
-              )}
-              <div className={`rounded-2xl border px-3 py-2 ${mine ? "border-primary/40 bg-primary/15" : "border-border bg-card"} ${m.deleted ? "opacity-50" : ""}`}>
-                {!mine && (
-                  <div className="mb-0.5 flex items-center gap-2 text-xs font-bold text-primary">
-                    {m.author?.name}
-                    {m.author && <RoleBadge role={m.author.role} />}
-                  </div>
-                )}
-                <p className="whitespace-pre-wrap text-sm">
-                  {m.deleted
-                    ? "Message supprimé"
-                    : m.body.split(/(@[\p{L}\p{N}_'-]+)/u).map((part, i) =>
-                        part.startsWith("@") ? (
-                          <span key={i} className="rounded bg-primary/15 px-0.5 font-bold text-primary">
-                            {part}
-                          </span>
-                        ) : (
-                          <span key={i}>{part}</span>
-                        ),
-                      )}
-                </p>
-                {!!m.reactions?.length && (
-                  <div className="mt-1 flex gap-1 text-sm">
-                    {m.reactions.map((r) => (
-                      <span key={r.emoji} className="rounded-full bg-black/20 px-1.5">
-                        {r.emoji} {r.userIds.length}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        <div ref={bottom} />
-      </main>
-      <footer className="border-t border-border p-3">
-        {reply && (
-          <div className="mb-2 flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2 text-xs">
-            Réponse à {reply.author?.name}
-            <button onClick={() => setReply(null)}>✕</button>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Input value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void send()} placeholder="Message · @ pour mentionner" />
-          <Button size="icon" onClick={() => void send()} disabled={!body.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+      <div
+        ref={scroller}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
+      >
+        {msgs.map((m) => (
+          <MessageBubble key={m.id} message={m} mine={m.authorId === user.id} onMenu={setMenu} />
+        ))}
+      </div>
+      <footer className="border-t border-border p-3" style={{ paddingBottom: keyboardInset > 0 ? keyboardInset : undefined }}>
+        {sendErr && <p className="mb-2 text-sm text-destructive">{sendErr}</p>}
+        <Composer
+          value={body}
+          onChange={setBody}
+          onSend={() => void send()}
+          disabled={offline}
+          replyLabel={reply?.author?.name}
+          onCancelReply={() => setReply(null)}
+        />
       </footer>
 
       <Dialog open={!!menu} onOpenChange={() => setMenu(null)}>
@@ -167,7 +160,7 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
                 {REACTIONS.map((e) => (
                   <button
                     key={e}
-                    className="text-xl"
+                    className="h-11 w-11 text-xl"
                     onClick={() => {
                       void react(menu.id, e).then(reload);
                       setMenu(null);
@@ -177,7 +170,14 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
                   </button>
                 ))}
               </div>
-              <Button variant="outline" className="w-full" onClick={() => { setReply(menu); setMenu(null); }}>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setReply(menu);
+                  setMenu(null);
+                }}
+              >
                 Répondre
               </Button>
               {(menu.authorId === user.id || user.role === "ADMIN") && !menu.deleted && (
@@ -185,8 +185,7 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
                   variant="destructive"
                   className="w-full"
                   onClick={() => {
-                    void deleteMessage(menu.id).then(reload);
-                    setMenu(null);
+                    setConfirmDelete(true);
                   }}
                 >
                   Supprimer
@@ -197,11 +196,21 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
         </DialogContent>
       </Dialog>
 
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Supprimer ce message ?"
+        onOpenChange={setConfirmDelete}
+        onConfirm={() => {
+          if (menu) void deleteMessage(menu.id).then(reload);
+          setMenu(null);
+        }}
+      />
+
       <Dialog open={membersOpen} onOpenChange={setMembersOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {roomName} — {people.length} membres
+              {room?.name} — {people.length} membres
             </DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
@@ -222,7 +231,7 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
                   <div className="text-xs text-muted-foreground">{p.pole ? `Pôle ${p.pole}` : p.role}</div>
                 </div>
                 {room && canModerateRoom(user, room, p) && (
-                  <Button size="sm" variant="outline" onClick={() => void setRoomAccess(roomId, p.id, false).then(reload)}>
+                  <Button size="sm" variant="outline" onClick={() => setRevokeUser(p)}>
                     Révoquer
                   </Button>
                 )}
@@ -253,6 +262,29 @@ export function ChatRoomScreen({ roomId, onBack }: { roomId: string; onBack: () 
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!revokeUser}
+        title={revokeUser ? `Révoquer l’accès de ${revokeUser.name} à ce salon ?` : ""}
+        onOpenChange={(o) => !o && setRevokeUser(null)}
+        confirmLabel="Révoquer"
+        onConfirm={() => {
+          if (revokeUser) void setRoomAccess(roomId, revokeUser.id, false).then(reload);
+        }}
+      />
     </div>
   );
+}
+
+function mergePoll(prev: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const tmps = prev.filter((m) => m.id.startsWith("tmp-"));
+  const now = Date.now();
+  const keptTmp = tmps.filter((t) => {
+    const age = now - Date.parse(t.createdAt);
+    if (age > 8000 && incoming.some((s) => s.authorId === t.authorId && s.body === t.body && Math.abs(Date.parse(s.createdAt) - Date.parse(t.createdAt)) < 10_000)) {
+      return false;
+    }
+    return !incoming.some((s) => s.id === t.id);
+  });
+  return [...incoming, ...keptTmp];
 }

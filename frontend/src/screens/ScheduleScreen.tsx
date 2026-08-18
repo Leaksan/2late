@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,7 +69,7 @@ function fromSlot(s: Partial<ScheduleSlot> & { pole?: Pole }): SlotDraft {
   };
 }
 
-export function ScheduleScreen() {
+export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotId?: string; openNoteId?: string } = {}) {
   const { user, schedule, openLink, upsertSlot, deleteSlot, upsertNote, deleteNote } = useStore();
   const now = useNow(1000);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
@@ -84,6 +86,9 @@ export function ScheduleScreen() {
   const [dueTime, setDueTime] = useState("23:59");
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const [evalPick, setEvalPick] = useState<ScheduleSlot | null>(null);
+  const [dropSlot, setDropSlot] = useState<string | null>(null);
+  const [dropNote, setDropNote] = useState<string | null>(null);
+  const [dayFocus, setDayFocus] = useState<WeekDay | null>(null);
 
   const reload = () =>
     void schedule(user?.pole ? undefined : viewPole === "ALL" ? undefined : viewPole).then((s) => {
@@ -95,6 +100,19 @@ export function ScheduleScreen() {
   useEffect(() => {
     reload();
   }, [viewPole]);
+
+  useEffect(() => {
+    if (!openNoteId || notes.length === 0) return;
+    const n = notes.find((x) => x.id === openNoteId);
+    const s = n ? slots.find((x) => x.id === n.slotId) : undefined;
+    if (s) openNote(s);
+  }, [openNoteId, notes, slots]);
+
+  useEffect(() => {
+    if (!highlightSlotId) return;
+    const el = document.getElementById(`slot-${highlightSlotId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightSlotId, slots]);
 
   if (!user) return null;
   const live = liveSlotOf(slots, new Date(now));
@@ -163,17 +181,49 @@ export function ScheduleScreen() {
         </div>
       )}
 
+      {grouped.length > 0 && (
+        <div className="sticky top-14 z-10 mb-3 flex gap-2 overflow-x-auto bg-background/90 py-2 backdrop-blur">
+          {grouped.map(({ day }) => (
+            <button
+              key={day}
+              type="button"
+              className={cn("h-9 shrink-0 rounded-full border px-3 text-sm font-semibold", dayFocus === day ? "border-primary text-primary" : "border-border")}
+              onClick={() => {
+                setDayFocus(day);
+                document.getElementById(`day-${day}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              {DAY_LABELS[day]}
+            </button>
+          ))}
+        </div>
+      )}
+
       {live && (
-        <button className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-left">
-          <span className="live-dot" />
-          <div>
-            <b>En cours · {live.discipline}</b>
-            <div className="text-xs text-muted-foreground">
-              {live.start}–{live.end} · {live.teacherName}
-              {live.room ? ` · ${live.room}` : ""}
+        <div className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="live-dot" />
+            <div>
+              <b>En cours · {live.discipline}</b>
+              <div className="text-xs text-muted-foreground">
+                {live.start}–{live.end} · {live.teacherName}
+                {live.room ? ` · ${live.room}` : ""}
+              </div>
             </div>
           </div>
-        </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {live.hasVisio && (
+              <Button size="sm" variant="outline" disabled={!live.visioOpen || live.coursePostponed} onClick={() => void openLink(live.id, "visio").then((u) => window.open(u, "_blank", "noopener"))}>
+                <Video className="h-3.5 w-3.5" /> Visio
+              </Button>
+            )}
+            {live.hasEval && (
+              <Button size="sm" variant="outline" disabled={live.evalState !== "open" && live.evalState !== "plain"} onClick={() => void openEval(live)}>
+                <BookOpen className="h-3.5 w-3.5" /> Éval
+              </Button>
+            )}
+          </div>
+        </div>
       )}
 
       {!live && next && (
@@ -182,14 +232,23 @@ export function ScheduleScreen() {
         </div>
       )}
 
+      {grouped.length === 0 && (
+        <EmptyState
+          icon={BookOpen}
+          title="Semaine vide"
+          description="Aucun créneau pour ce pôle."
+          action={canManage ? { label: "Ajouter un créneau", onClick: () => setForm(fromSlot({ pole: user.pole || "STI", day: "LUNDI", start: "08:00", end: "10:00", visioOpen: true, evalOpen: true })) } : undefined}
+        />
+      )}
+
       {grouped.map(({ day, items }) => (
-        <div key={day} className="mb-5">
-          <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{DAY_LABELS[day]}</div>
+        <div key={day} id={`day-${day}`} className="mb-5">
+          <div className="mb-2 text-over uppercase text-muted-foreground">{DAY_LABELS[day]}</div>
           {items.map((s) => {
             const note = notes.find((n) => n.slotId === s.id);
             const ends = s.evalStartsAt && s.evalMinutes ? Date.parse(s.evalStartsAt) + s.evalMinutes * 60_000 : 0;
             return (
-              <Card key={s.id} className="mb-2 flex gap-3 p-3">
+              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", highlightSlotId === s.id && "ring-2 ring-primary")}>
                 <div className="flex w-14 flex-col items-center justify-center rounded-xl border border-border bg-card-2 py-2 text-center">
                   <b>{s.start}</b>
                   <span className="text-[11px] text-muted-foreground">{s.end}</span>
@@ -247,7 +306,7 @@ export function ScheduleScreen() {
                         <Button size="sm" variant="ghost" onClick={() => { setForm(fromSlot(s)); setFormErr(null); }}>
                           Modifier
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-red-400" onClick={() => void deleteSlot(s.id).then(reload)}>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDropSlot(s.id)}>
                           Suppr.
                         </Button>
                       </>
@@ -416,7 +475,7 @@ export function ScheduleScreen() {
                 className="text-red-400"
                 onClick={() => {
                   const existing = notes.find((n) => n.slotId === noteSlot?.id);
-                  if (existing) void deleteNote(existing.id).then(() => { setNoteSlot(null); reload(); });
+                  if (existing) setDropNote(existing.id);
                 }}
               >
                 Supprimer
@@ -480,6 +539,29 @@ export function ScheduleScreen() {
           ))}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!dropSlot}
+        title="Supprimer ce créneau ?"
+        body="Le planning du pôle change pour tout le monde."
+        onOpenChange={(o) => !o && setDropSlot(null)}
+        onConfirm={() => {
+          if (dropSlot) void deleteSlot(dropSlot).then(reload);
+        }}
+      />
+      <ConfirmDialog
+        open={!!dropNote}
+        title="Supprimer cette note personnelle ?"
+        onOpenChange={(o) => !o && setDropNote(null)}
+        onConfirm={() => {
+          if (dropNote) {
+            void deleteNote(dropNote).then(() => {
+              setNoteSlot(null);
+              reload();
+            });
+          }
+        }}
+      />
     </div>
   );
 }

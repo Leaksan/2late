@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" class="dark">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -8,6 +8,21 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>2late — Annonces universitaires</title>
+    <script>
+      (function () {
+        try {
+          var p = localStorage.getItem("2late.theme") || "system";
+          var light =
+            p === "light" ||
+            (p !== "dark" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+          document.documentElement.classList.toggle("dark", !light);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute("content", light ? "#f4f6fa" : "#0b0e13");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { weightedAverage } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/types";
 import { formatDateTime, frNum, initials } from "@/lib/utils";
+import { resolveUiFlag, setUiFlag } from "@/lib/ui-flag";
 import { useStore } from "@/store";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { GraduationCap, LogOut, Megaphone } from "lucide-react";
 import { useEffect } from "react";
 import type { Grade } from "@/lib/types";
@@ -23,6 +25,8 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
   const [appWa, setAppWa] = useState("");
   const [appErr, setAppErr] = useState<string | null>(null);
   const [myGrades, setMyGrades] = useState<Grade[]>([]);
+  const [waOk, setWaOk] = useState(false);
+  const [uiV2, setUiV2] = useState(() => resolveUiFlag() === "v2");
 
   useEffect(() => {
     void grades().then((d) => setMyGrades(d.grades));
@@ -57,12 +61,43 @@ export function ProfileScreen({ onOpenGrades }: { onOpenGrades: () => void }) {
             onClick={async () => {
               const e = await setWhatsapp(wa);
               setWaErr(e);
+              setWaOk(!e);
             }}
           >
             Enregistrer
           </Button>
         </div>
-        {waErr && <p className="mt-1 text-sm text-red-400">{waErr}</p>}
+        {waErr && <p className="mt-1 text-sm text-destructive">{waErr}</p>}
+        {waOk && !waErr && (
+          <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400" role="status">
+            Numéro enregistré.
+          </p>
+        )}
+      </Card>
+
+      <h2 className="mb-2 text-over uppercase text-muted-foreground">Interface</h2>
+      <Card className="mb-4 p-4">
+        <label className="flex cursor-pointer items-start gap-3 p-3 -m-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-5 w-5"
+            checked={uiV2}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setUiV2(next);
+              setUiFlag(next ? "v2" : "v1");
+              window.location.reload();
+            }}
+          />
+          <span>
+            <span className="font-semibold">Nouvelle interface</span>
+            <span className="mt-0.5 block text-sm text-muted-foreground">Accueil command center, 4 onglets, menu Plus.</span>
+          </span>
+        </label>
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-semibold">Thème</div>
+          <ThemeToggle />
+        </div>
       </Card>
 
       <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Résultats</h2>

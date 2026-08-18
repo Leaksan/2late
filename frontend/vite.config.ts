@@ -17,7 +17,7 @@ export default defineConfig({
     proxy: { "/api": "http://127.0.0.1:5000" },
   },
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
+    environment: "jsdom",
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });
