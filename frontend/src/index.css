@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  .dark {
+    --background: 220 28% 6%;
+    --foreground: 220 33% 96%;
+    --card: 220 22% 11%;
+    --card-foreground: 220 33% 96%;
+    --card-2: 218 22% 15%;
+    --popover: 220 22% 8%;
+    --popover-foreground: 220 33% 96%;
+    --primary: 210 100% 74%;
+    --primary-foreground: 220 40% 8%;
+    --secondary: 218 18% 16%;
+    --secondary-foreground: 220 20% 80%;
+    --muted: 218 16% 16%;
+    --muted-foreground: 214 16% 72%;
+    --accent: 218 18% 16%;
+    --accent-foreground: 220 33% 96%;
+    --destructive: 0 100% 68%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 18% 22%;
+    --input: 218 18% 22%;
+    --ring: 210 100% 74%;
+    --radius: 1.5rem;
+
+    --bg: #0b0e13;
+    --bg-elev: #12161d;
+    --text: #f2f5fa;
+    --muted: #a9b4c4;
+    --faint: #7c899d;
+    --yellow: #e5c100;
+    --red: #ff5c5c;
+    --green: #3dd68c;
+    --admin: #b9a4ff;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: var(--bg);
+    font-family: Inter, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+.screen {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 16px calc(88px + var(--safe-bottom));
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(14, 17, 22, 0.86);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(33, 41, 54, 0.9);
+}
+
+.bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: rgba(17, 21, 28, 0.94);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(33, 41, 54, 0.9);
+  padding-bottom: var(--safe-bottom);
+}
+
+.ann-stripe {
+  width: 5px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.fab {
+  position: fixed;
+  right: max(18px, calc(50vw - 360px + 18px));
+  bottom: calc(84px + var(--safe-bottom));
+  z-index: 25;
+  width: 58px;
+  height: 58px;
+  border-radius: 19px;
+  background: #7cb9ff;
+  color: #0b1220;
+  border: none;
+  box-shadow: 0 8px 28px rgba(124, 185, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3dd68c;
+  flex: none;
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
