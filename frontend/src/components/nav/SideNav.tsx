@@ -1,6 +1,7 @@
 import type { Route } from "@/app/routes";
 import { activeTab } from "@/app/routes";
 import { Logo } from "@/components/Logo";
+import { ThemeCycleButton } from "@/components/ThemeCycleButton";
 import type { NavBadges, User } from "@/lib/types";
 import { initials } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -65,10 +66,13 @@ export function SideNav({
           );
         })}
       </nav>
-      <button className="mt-auto flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted" onClick={() => onNavigate({ name: "profile", query: {} })}>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs font-bold">{initials(user.name)}</span>
-        <span className="truncate text-sm font-semibold">{user.name}</span>
-      </button>
+      <div className="mt-auto flex flex-col gap-2">
+        <ThemeCycleButton />
+        <button className="flex items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-muted" onClick={() => onNavigate({ name: "profile", query: {} })}>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs font-bold">{initials(user.name)}</span>
+          <span className="truncate text-sm font-semibold">{user.name}</span>
+        </button>
+      </div>
     </aside>
   );
 }

@@ -101,6 +101,12 @@ export function isMentioned(user: { name: string }, body: string): boolean {
   return re.test(body);
 }
 
+export function canMentionUser(viewer: { id: string; role: Role }, target: { id: string; role: Role }): boolean {
+  if (viewer.id === target.id) return false;
+  if (target.role === "PROF") return viewer.role === "RELAIS" || viewer.role === "ADMIN";
+  return true;
+}
+
 export function evalStateOf(
   slot: {
     evalPostponed?: boolean;

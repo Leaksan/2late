@@ -89,6 +89,7 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
   const [dropSlot, setDropSlot] = useState<string | null>(null);
   const [dropNote, setDropNote] = useState<string | null>(null);
   const [dayFocus, setDayFocus] = useState<WeekDay | null>(null);
+  const [localHighlight, setLocalHighlight] = useState<string | null>(null);
 
   const reload = () =>
     void schedule(user?.pole ? undefined : viewPole === "ALL" ? undefined : viewPole).then((s) => {
@@ -113,6 +114,12 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
     const el = document.getElementById(`slot-${highlightSlotId}`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightSlotId, slots]);
+
+  const scrollToSlot = (slotId: string) => {
+    setLocalHighlight(slotId);
+    document.getElementById(`slot-${slotId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => setLocalHighlight((cur) => (cur === slotId ? null : cur)), 2200);
+  };
 
   if (!user) return null;
   const live = liveSlotOf(slots, new Date(now));
@@ -163,8 +170,8 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
       )}
 
       {due.length > 0 && (
-        <div className="mb-3 rounded-3xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3">
-          <b className="inline-flex items-center gap-1 text-sm text-yellow-200">
+        <div className="mb-3 rounded-3xl border border-yellow-600/50 bg-yellow-500/10 px-4 py-3 dark:border-yellow-500/40">
+          <b className="inline-flex items-center gap-1 text-sm text-yellow-700 dark:text-yellow-200">
             <Clock className="h-4 w-4" /> N’oublie pas — échéance dans moins de 48 h
           </b>
           <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
@@ -173,7 +180,7 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
               const cd = countdown(n.dueAt!, now);
               return (
                 <div key={n.id}>
-                  <span className={cd.late ? "text-red-400" : "text-yellow-200"}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
+                  <span className={cn(cd.late ? "text-red-600 dark:text-red-400" : "text-yellow-700 dark:text-yellow-200")}>{cd.text}</span> · {s ? s.discipline : "Cours"} — {n.body}
                 </div>
               );
             })}
@@ -182,7 +189,7 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
       )}
 
       {grouped.length > 0 && (
-        <div className="sticky top-14 z-10 mb-3 flex gap-2 overflow-x-auto bg-background/90 py-2 backdrop-blur">
+        <div className="day-nav sticky top-14 z-10 mb-3 flex gap-2 overflow-x-auto bg-background/90 py-2 backdrop-blur">
           {grouped.map(({ day }) => (
             <button
               key={day}
@@ -200,25 +207,33 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
       )}
 
       {live && (
-        <div className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3">
+        <div
+          className="mb-4 cursor-pointer rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 transition-colors hover:bg-emerald-400/15"
+          role="button"
+          tabIndex={0}
+          onClick={() => scrollToSlot(live.id)}
+          onKeyDown={(e) => { if (e.key === "Enter") scrollToSlot(live.id); }}
+          aria-label={`Aller au cours en cours : ${live.discipline}`}
+        >
           <div className="flex items-center gap-3">
             <span className="live-dot" />
-            <div>
+            <div className="min-w-0 flex-1">
               <b>En cours · {live.discipline}</b>
               <div className="text-xs text-muted-foreground">
                 {live.start}–{live.end} · {live.teacherName}
                 {live.room ? ` · ${live.room}` : ""}
               </div>
             </div>
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">Voir</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             {live.hasVisio && (
-              <Button size="sm" variant="outline" disabled={!live.visioOpen || live.coursePostponed} onClick={() => void openLink(live.id, "visio").then((u) => window.open(u, "_blank", "noopener"))}>
+              <Button size="sm" variant="outline" disabled={!live.visioOpen || live.coursePostponed} onClick={(e) => { e.stopPropagation(); void openLink(live.id, "visio").then((u) => window.open(u, "_blank", "noopener")); }}>
                 <Video className="h-3.5 w-3.5" /> Visio
               </Button>
             )}
             {live.hasEval && (
-              <Button size="sm" variant="outline" disabled={live.evalState !== "open" && live.evalState !== "plain"} onClick={() => void openEval(live)}>
+              <Button size="sm" variant="outline" disabled={live.evalState !== "open" && live.evalState !== "plain"} onClick={(e) => { e.stopPropagation(); void openEval(live); }}>
                 <BookOpen className="h-3.5 w-3.5" /> Éval
               </Button>
             )}
@@ -242,13 +257,13 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
       )}
 
       {grouped.map(({ day, items }) => (
-        <div key={day} id={`day-${day}`} className="mb-5">
+        <div key={day} id={`day-${day}`} className="mb-5 scroll-mt-[7.25rem]">
           <div className="mb-2 text-over uppercase text-muted-foreground">{DAY_LABELS[day]}</div>
           {items.map((s) => {
             const note = notes.find((n) => n.slotId === s.id);
             const ends = s.evalStartsAt && s.evalMinutes ? Date.parse(s.evalStartsAt) + s.evalMinutes * 60_000 : 0;
             return (
-              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", highlightSlotId === s.id && "ring-2 ring-primary")}>
+              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", (highlightSlotId === s.id || localHighlight === s.id) && "ring-2 ring-primary")}>
                 <div className="flex w-14 flex-col items-center justify-center rounded-xl border border-border bg-card-2 py-2 text-center">
                   <b>{s.start}</b>
                   <span className="text-[11px] text-muted-foreground">{s.end}</span>
@@ -259,8 +274,8 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
                     {s.teacherName}
                     {s.room ? ` · ${s.room}` : ""}
                   </div>
-                  {s.coursePostponed && <div className="text-xs text-yellow-300">Cours reporté{s.postponedReason ? ` — ${s.postponedReason}` : ""}</div>}
-                  {s.evalPostponed && <div className="text-xs text-yellow-300">Évaluation reportée</div>}
+                  {s.coursePostponed && <div className="text-xs text-yellow-700 dark:text-yellow-300">Cours reporté{s.postponedReason ? ` — ${s.postponedReason}` : ""}</div>}
+                  {s.evalPostponed && <div className="text-xs text-yellow-700 dark:text-yellow-300">Évaluation reportée</div>}
                   <div className="mt-2 flex flex-wrap gap-2">
                     {s.hasVisio && (
                       <Button
@@ -438,7 +453,7 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
               </label>
               <Label>Motif du report</Label>
               <Input value={form.postponedReason} onChange={(e) => setForm({ ...form, postponedReason: e.target.value })} />
-              {formErr && <p className="text-sm text-red-400">{formErr}</p>}
+               {formErr && <p className="text-sm text-red-600 dark:text-red-400">{formErr}</p>}
               <Button type="submit" className="w-full">
                 Enregistrer
               </Button>
@@ -467,12 +482,12 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
               <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} aria-label="Heure limite" />
             </div>
           )}
-          {noteErr && <p className="text-sm text-red-400">{noteErr}</p>}
+           {noteErr && <p className="text-sm text-red-600 dark:text-red-400">{noteErr}</p>}
           <div className="flex gap-2">
             {notes.find((n) => n.slotId === noteSlot?.id) && (
               <Button
                 variant="outline"
-                className="text-red-400"
+                className="text-red-600 dark:text-red-400"
                 onClick={() => {
                   const existing = notes.find((n) => n.slotId === noteSlot?.id);
                   if (existing) setDropNote(existing.id);

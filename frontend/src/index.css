@@ -219,3 +219,29 @@
 .skip-link:focus {
   top: 12px;
 }
+
+/* Nav des jours : hauteur stable pour scroll-mt des sections jour */
+.day-nav { height: 3.25rem; box-sizing: content-box; }
+
+/* ---------- Animations des pop-ups modernes ---------- */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes sheetIn {
+  from { transform: translateY(60px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes sheetOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(40px); opacity: 0; }
+}
+@keyframes popIn {
+  from { transform: translate(-50%, -50%) scale(0.94); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes popOut {
+  from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  to { transform: translate(-50%, -50%) scale(0.96); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-radix-dialog-overlay], [data-radix-dialog-content] { animation: none !important; }
+}

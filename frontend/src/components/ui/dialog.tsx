@@ -14,7 +14,11 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out", className)}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/60 backdrop-blur-[6px]",
+      "data-[state=open]:animate-[fadeIn_160ms_ease-out] data-[state=closed]:animate-[fadeOut_140ms_ease-in]",
+      className,
+    )}
     {...props}
   />
 ));
@@ -29,13 +33,19 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full max-w-lg gap-4 border border-border bg-popover p-6 shadow-lg sm:rounded-lg left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[88dvh] overflow-y-auto",
+        // Base
+        "fixed z-50 grid w-full gap-4 border border-border bg-popover shadow-2xl",
+        // Bottom-sheet mobile — centré sur desktop
+        "left-0 right-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+        "data-[state=open]:animate-[sheetIn_260ms_cubic-bezier(0.2,0.8,0.2,1)] data-[state=closed]:animate-[sheetOut_180ms_ease-in]",
+        "sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:max-h-[88dvh] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6 sm:pb-6",
+        "data-[state=open]:sm:animate-[popIn_220ms_cubic-bezier(0.2,0.8,0.2,1)] data-[state=closed]:sm:animate-[popOut_160ms_ease-in]",
         className,
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full border border-border bg-card p-1.5 text-muted-foreground hover:text-foreground">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full border border-border bg-card p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
         <X className="h-4 w-4" />
         <span className="sr-only">Fermer</span>
       </DialogPrimitive.Close>

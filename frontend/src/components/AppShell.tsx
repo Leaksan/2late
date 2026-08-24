@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Route } from "@/app/routes";
 import { Logo } from "@/components/Logo";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { ThemeCycleButton } from "@/components/ThemeCycleButton";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { SideNav } from "@/components/nav/SideNav";
 import { useKeyboardOpen } from "@/hooks/useKeyboardOpen";
@@ -30,7 +31,7 @@ export function AppShell({
   const wide = useMediaQuery("(min-width: 1024px)");
   const { keyboardOpen } = useKeyboardOpen();
   const isChat = route.name === "chat";
-  const hideBottom = wide || (isChat && keyboardOpen);
+  const hideBottom = wide || isChat || (isChat && keyboardOpen);
   const hideTop = isChat;
 
   const shortDate = new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
@@ -74,6 +75,7 @@ export function AppShell({
                   </div>
                 )}
               </div>
+              <ThemeCycleButton />
               <button
                 className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-xs font-bold"
                 aria-label="Profil"
