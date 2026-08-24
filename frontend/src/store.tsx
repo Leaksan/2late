@@ -49,6 +49,7 @@ interface Store {
   schedule(pole?: string): Promise<{ slots: ScheduleSlot[]; notes: CourseNote[]; dueSoon: CourseNote[]; subjects: any[]; canManage: boolean }>;
   openLink(slotId: string, kind: "visio" | "eval", group?: string): Promise<string>;
   upsertSlot(data: Record<string, unknown>): Promise<string | null>;
+  updateSubject(sid: string, patch: Record<string, unknown>): Promise<string | null>;
   deleteSlot(id: string): Promise<void>;
   upsertNote(data: Partial<CourseNote> & { body: string; slotId: string }): Promise<string | null>;
   deleteNote(id: string): Promise<void>;
@@ -334,6 +335,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       upsertSlot: async (data) => {
         try {
           await apiSend("/api/schedule", "POST", data);
+          return null;
+        } catch (e: any) {
+          return e.message;
+        }
+      },
+
+      updateSubject: async (sid, patch) => {
+        try {
+          await apiSend(`/api/subjects/${sid}`, "PATCH", patch);
           return null;
         } catch (e: any) {
           return e.message;

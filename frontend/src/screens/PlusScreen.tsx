@@ -54,6 +54,29 @@ export function PlusScreen({
         <div className="mb-2 text-over uppercase text-muted-foreground">Apparence</div>
         <ThemeToggle />
       </div>
+
+      <div className="pt-4">
+        <div className="mb-2 text-over uppercase text-muted-foreground">Installer l’application</div>
+        <Card className="space-y-3 p-4">
+          <div>
+            <div className="font-semibold">Android (Chrome)</div>
+            <ol className="mt-1 list-decimal space-y-1 pl-5 text-meta text-muted-foreground">
+              <li>Appuyez sur le menu <b>⋮</b> en haut à droite de Chrome.</li>
+              <li>Choisissez <b>« Installer l’application »</b> ou « Ajouter à l’écran d’accueil ».</li>
+              <li>Confirmez — l’icône 2late apparaît sur votre écran d’accueil.</li>
+            </ol>
+          </div>
+          <div>
+            <div className="font-semibold">iPhone / iPad (Safari)</div>
+            <ol className="mt-1 list-decimal space-y-1 pl-5 text-meta text-muted-foreground">
+              <li>Ouvrez 2late dans <b>Safari</b> (obligatoire).</li>
+              <li>Appuyez sur le bouton <b>Partager</b> (carré avec une flèche).</li>
+              <li>Faites défiler puis choisissez <b>« Sur l’écran d’accueil »</b>.</li>
+              <li>Appuyez sur <b>« Ajouter »</b>.</li>
+            </ol>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

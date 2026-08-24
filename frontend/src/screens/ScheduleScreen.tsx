@@ -69,8 +69,62 @@ function fromSlot(s: Partial<ScheduleSlot> & { pole?: Pole }): SlotDraft {
   };
 }
 
+type SubjectRow = { id: string; pole: string; discipline: string; teacherName: string; room?: string | null; visioUrl?: string | null; evalUrl?: string | null };
+
+function SubjectsList({ subjects, slots, onSave }: { subjects: SubjectRow[]; slots: ScheduleSlot[]; onSave: (id: string, patch: Record<string, unknown>) => Promise<string | null> }) {
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ discipline: "", teacherName: "", room: "", visioUrl: "", evalUrl: "" });
+  const [err, setErr] = useState<string | null>(null);
+
+  const start = (s: SubjectRow) => {
+    setEditId(s.id);
+    setErr(null);
+    setForm({ discipline: s.discipline, teacherName: s.teacherName, room: s.room ?? "", visioUrl: s.visioUrl ?? "", evalUrl: s.evalUrl ?? "" });
+  };
+
+  const list = [...subjects].sort((a, b) => a.discipline.localeCompare(b.discipline, "fr"));
+
+  return (
+    <div className="space-y-2 pt-1">
+      {list.map((s) => {
+        const nb = slots.filter((x) => x.pole === s.pole && x.discipline === s.discipline).length;
+        const editing = editId === s.id;
+        return editing ? (
+          <div key={s.id} className="space-y-2 rounded-xl border border-border p-3">
+            <Input value={form.discipline} onChange={(e) => setForm({ ...form, discipline: e.target.value })} placeholder="Intitulé *" aria-label="Intitulé" />
+            <Input value={form.teacherName} onChange={(e) => setForm({ ...form, teacherName: e.target.value })} placeholder="Enseignant * (ex. Pr. Anne Mba)" aria-label="Enseignant" />
+            <Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Salle" aria-label="Salle" />
+            <Input value={form.visioUrl} onChange={(e) => setForm({ ...form, visioUrl: e.target.value })} placeholder="Lien visio" aria-label="Lien visio" />
+            <Input value={form.evalUrl} onChange={(e) => setForm({ ...form, evalUrl: e.target.value })} placeholder="Lien évaluation" aria-label="Lien évaluation" />
+            {err && <p className="text-sm text-red-500">{err}</p>}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setEditId(null)}>Annuler</Button>
+              <Button className="flex-1" onClick={() => {
+                void onSave(s.id, form).then((e) => {
+                  if (e) setErr(e);
+                  else setEditId(null);
+                });
+              }}>Enregistrer</Button>
+            </div>
+          </div>
+        ) : (
+          <div key={s.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+            <BookOpen className="h-4 w-4 flex-none text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-semibold">{s.discipline}</div>
+              <div className="text-xs text-muted-foreground">{s.teacherName}{s.room ? ` · ${s.room}` : ""} · {nb} créneau{nb > 1 ? "x" : ""}</div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => start(s)}>Modifier</Button>
+          </div>
+        );
+      })}
+      {list.length === 0 && <p className="text-sm text-muted-foreground">Aucune matière enregistrée pour cette sélection.</p>}
+    </div>
+  );
+}
+
 export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotId?: string; openNoteId?: string } = {}) {
-  const { user, schedule, openLink, upsertSlot, deleteSlot, upsertNote, deleteNote } = useStore();
+  const { user, schedule, openLink, upsertSlot, deleteSlot, upsertNote, deleteNote, updateSubject } = useStore();
   const now = useNow(1000);
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [notes, setNotes] = useState<CourseNote[]>([]);
@@ -90,12 +144,15 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
   const [dropNote, setDropNote] = useState<string | null>(null);
   const [dayFocus, setDayFocus] = useState<WeekDay | null>(null);
   const [localHighlight, setLocalHighlight] = useState<string | null>(null);
+  const [subjectsOpen, setSubjectsOpen] = useState(false);
+  const [subjects, setSubjects] = useState<Array<{ id: string; pole: string; discipline: string; teacherName: string; room?: string | null; visioUrl?: string | null; evalUrl?: string | null }>>([]);
 
   const reload = () =>
     void schedule(user?.pole ? undefined : viewPole === "ALL" ? undefined : viewPole).then((s) => {
       setSlots(s.slots);
       setNotes(s.notes);
       setCanManage(s.canManage);
+      setSubjects(s.subjects ?? []);
     });
 
   useEffect(() => {
@@ -156,6 +213,12 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
 
   return (
     <div>
+      {canManage && (
+        <Button size="sm" variant="outline" className="mb-3" onClick={() => setSubjectsOpen(true)}>
+          <BookOpen className="h-3.5 w-3.5" /> Matières
+        </Button>
+      )}
+
       {!user.pole && (
         <div className="mb-3 flex flex-wrap gap-2">
           <button className={cn("rounded-full border px-3 py-1 text-sm", viewPole === "ALL" && "border-primary text-primary")} onClick={() => setViewPole("ALL")}>
@@ -554,6 +617,27 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
           ))}
         </DialogContent>
       </Dialog>
+      <Dialog open={subjectsOpen} onOpenChange={setSubjectsOpen}>
+        <DialogContent className="max-h-[88dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Matières enregistrées</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Modifier une matière (changement d’enseignant, intitulé adapté…) met à jour automatiquement tous les créneaux du pôle qui l’utilisent.
+          </p>
+          <SubjectsList
+            subjects={subjects}
+            slots={slots}
+            onSave={async (id, patch) => {
+              const err = await updateSubject(id, patch);
+              if (err) return err;
+              reload();
+              return null;
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
 
       <ConfirmDialog
         open={!!dropSlot}

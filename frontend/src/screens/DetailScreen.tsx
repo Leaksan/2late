@@ -234,10 +234,28 @@ export function DetailScreen({
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{s.student?.name ?? "Compte supprimé"}</div>
-                <div className="text-xs text-muted-foreground">
-                  envoyé le {formatExactSendTime(s.createdAt)} · {formatSize(s.fileSize)}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  envoyé <span className="time-chip"><b>{new Date(s.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</b><span className="time-chip-day">{new Date(s.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span></span> · {formatSize(s.fileSize)}
                 </div>
               </div>
+              {s.student?.whatsapp ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title={`Contacter ${s.student.name} sur WhatsApp`}
+                  onClick={() => {
+                    const d = new Date(s.createdAt);
+                    const msg = `Bonjour ${s.student!.name.split(" ")[0]}, je te confirme la bonne réception de ton document envoyé le ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} via 2late (collecte « ${ann.title} »). — ${user.name}`;
+                    window.open(`https://wa.me/${s.student!.whatsapp!.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" disabled title="Numéro WhatsApp non renseigné">
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+              )}
               {s.canDownload && (
                 <Button variant="ghost" size="sm" onClick={() => void download(s.id, s.student?.name || s.fileName)}>
                   <Download className="h-4 w-4" />
