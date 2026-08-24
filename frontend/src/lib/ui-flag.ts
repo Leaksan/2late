@@ -7,7 +7,7 @@ export function resolveUiFlag(): UiFlag {
   }
   const env = (import.meta.env.VITE_UI_DEFAULT as string | undefined) ?? "";
   if (env === "v1" || env === "v2") return env;
-  return "v1";
+  return "v2";
 }
 
 export function setUiFlag(flag: UiFlag) {
