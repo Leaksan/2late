@@ -37,8 +37,11 @@ def svc(app):
     return app.services
 
 
-def auth_header(client, email: str, password: str) -> dict:
-    r = client.post("/api/auth/login", json={"email": email, "password": password})
+def auth_header(client, email: str, password: str, admin: bool = False) -> dict:
+    r = client.post(
+        "/api/admin/login" if admin else "/api/auth/login",
+        json={"email": email, "password": password},
+    )
     assert r.status_code == 200, r.get_json()
     body = r.get_json()
     assert "password" not in body
@@ -54,7 +57,7 @@ def etu(client):
 
 @pytest.fixture()
 def admin(client):
-    return auth_header(client, "admin@2late.com", "admin")
+    return auth_header(client, "admin@2late.com", "admin", admin=True)
 
 
 @pytest.fixture()

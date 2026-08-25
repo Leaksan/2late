@@ -28,6 +28,9 @@ def create_app(config: dict | None = None) -> Flask:
 
     frontend_override = os.environ.get("TWOLATE_FRONTEND_DIST")
     frontend_dist = Path(frontend_override) if frontend_override else (_repo_root() / "frontend" / "dist")
+    # Interface d'administration : build séparé servi sous /gestion/.
+    admin_override = os.environ.get("TWOLATE_ADMIN_DIST")
+    admin_dist = Path(admin_override) if admin_override else (_repo_root() / "frontend" / "admin-dist")
 
     app = Flask(
         __name__,
@@ -72,12 +75,23 @@ def create_app(config: dict | None = None) -> Flask:
         @app.route("/", defaults={"path": ""})
         @app.route("/<path:path>")
         def spa(path: str):
-            if path.startswith("api/"):
+            if path.startswith("api/") or path.startswith("gestion"):
                 return jsonify({"error": "Not found"}), 404
             target = frontend_dist / path
             if path and target.exists() and target.is_file():
                 return send_from_directory(frontend_dist, path)
             return send_from_directory(frontend_dist, "index.html")
+
+    if admin_dist.exists():
+
+        @app.route("/gestion", defaults={"path": ""})
+        @app.route("/gestion/", defaults={"path": ""})
+        @app.route("/gestion/<path:path>")
+        def admin_spa(path: str):
+            target = admin_dist / path
+            if path and target.exists() and target.is_file():
+                return send_from_directory(admin_dist, path)
+            return send_from_directory(admin_dist, "index.html")
 
     @app.teardown_appcontext
     def _close(_exc):

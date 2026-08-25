@@ -46,6 +46,21 @@ cd frontend && npm run build
 # puis relancer Flask : l’API et le SPA sont servis ensemble sur :5000
 ```
 
+## Interface d'administration séparée
+
+L'admin est **détachée du site applicatif** : les comptes ADMIN ne peuvent
+plus se connecter sur le site principal (`/api/auth/login` les refuse). Elle
+vit sous **`/gestion/`** (build `VITE_ADMIN=1`) avec son point d'entrée
+dédié `/api/admin/login`, réservé aux comptes ADMIN.
+
+```bash
+# Local : site applicatif
+cd frontend && npm run dev
+# Local : interface d'administration
+VITE_ADMIN=1 npm run dev
+# Docker/Render : les deux builds sont servis par Flask ( / et /gestion/ )
+```
+
 ## Comptes de démonstration
 
 | Rôle | E-mail | Mot de passe |

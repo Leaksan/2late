@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ADMIN_BUILD } from "./lib/admin";
 import { apiGet, apiSend, apiUpload, getToken, setToken } from "./lib/api";
 import { classifyError } from "./lib/errors";
 import type {
@@ -221,7 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       try {
-        const data = await apiSend("/api/auth/login", "POST", { email, password });
+        const data = await apiSend(ADMIN_BUILD ? "/api/admin/login" : "/api/auth/login", "POST", { email, password });
         setToken(data.token);
         await refresh();
         return null;

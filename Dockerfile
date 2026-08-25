@@ -6,6 +6,9 @@ WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+# Deux builds : l'interface d'administration (déplacée avant, car le build
+# Vite vide dist/) puis le site applicatif servi à la racine.
+RUN VITE_ADMIN=1 BASE_PATH=/gestion/ npm run build && mv dist admin-dist
 RUN npm run build
 
 FROM python:3.12-slim-bookworm AS runtime
@@ -14,6 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PORT=5000 \
     TWOLATE_FRONTEND_DIST=/app/frontend/dist \
+    TWOLATE_ADMIN_DIST=/app/frontend/admin-dist \
     TWOLATE_DB=/data/2late.db \
     TWOLATE_UPLOADS=/data/uploads
 
@@ -26,6 +30,7 @@ RUN pip install --no-cache-dir -r /app/backend/requirements.txt \
 
 COPY backend /app/backend
 COPY --from=frontend /src/frontend/dist /app/frontend/dist
+COPY --from=frontend /src/frontend/admin-dist /app/frontend/admin-dist
 
 RUN chown -R twolate:twolate /app /data
 

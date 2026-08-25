@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ADMIN_BUILD } from "@/lib/admin";
 import { POLES, POLE_LABELS, type Pole } from "@/lib/types";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
 
-const DEMO = [
-  { label: "Admin", email: "admin@2late.com", pwd: "admin" },
-  { label: "Prof / Informaticien", email: "prof@2late.com", pwd: "prof" },
-  { label: "Relais STI", email: "marc@2late.com", pwd: "marc" },
-  { label: "Étudiant STI", email: "etu@2late.com", pwd: "etu" },
-];
+const DEMO = ADMIN_BUILD
+  ? [{ label: "Administration", email: "admin@2late.com", pwd: "admin" }]
+  : [
+      { label: "Prof / Informaticien", email: "prof@2late.com", pwd: "prof" },
+      { label: "Relais STI", email: "marc@2late.com", pwd: "marc" },
+      { label: "Étudiant STI", email: "etu@2late.com", pwd: "etu" },
+    ];
 
 export function AuthScreen() {
   const { login, register } = useStore();
@@ -41,9 +43,12 @@ export function AuthScreen() {
         </div>
         <div className="text-4xl font-extrabold tracking-tight">
           2<em className="not-italic text-primary">late</em>
+          {ADMIN_BUILD && <span className="ml-2 align-middle text-sm font-bold uppercase tracking-widest text-muted-foreground">Administration</span>}
         </div>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Les annonces officielles et communautaires de l’université — centralisées, lisibles, vérifiées.
+          {ADMIN_BUILD
+            ? "Interface réservée à l’administration — accès via compte autorisé uniquement."
+            : "Les annonces officielles et communautaires de l’université — centralisées, lisibles, vérifiées."}
         </p>
       </div>
 
@@ -102,7 +107,8 @@ export function AuthScreen() {
             </Button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-muted-foreground">
+         {!ADMIN_BUILD && (
+   <p className="mt-5 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>
                 Pas encore de compte ?{" "}
@@ -119,6 +125,7 @@ export function AuthScreen() {
               </>
             )}
           </p>
+ )}
 
           {mode === "login" && (
             <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/40 p-3">

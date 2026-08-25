@@ -7,7 +7,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { canPublish } from "@/lib/domain";
 import { applyTheme } from "@/lib/theme";
 import { resolveUiFlag } from "@/lib/ui-flag";
+import { AdminApp } from "@/screens/AdminApp";
 import { AdminScreen } from "@/screens/AdminScreen";
+import { ADMIN_BUILD } from "@/lib/admin";
 import { AuthScreen } from "@/screens/AuthScreen";
 import { ChatRoomScreen } from "@/screens/ChatRoomScreen";
 import { DetailScreen } from "@/screens/DetailScreen";
@@ -25,6 +27,10 @@ import { useStore } from "@/store";
 
 export default function App() {
   const { ready, user, badges, offline, offlineBlocking, refresh } = useStore();
+
+  // Interface d'administration : build séparé, jamais mêlé au site applicatif.
+  if (ADMIN_BUILD) return <AdminApp />;
+
   const { route, navigate } = useRoute();
   const [ui] = useState(() => resolveUiFlag());
   const wide = useMediaQuery("(min-width: 1024px)");

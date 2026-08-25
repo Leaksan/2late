@@ -122,11 +122,29 @@ class Services:
 
     # ---------- auth ----------
     def login(self, email: str, password: str) -> tuple[str, User]:
+        user = self._check_credentials(email, password)
+        if user.role == "ADMIN":
+            raise ServiceError(
+                "Les comptes administration ne peuvent pas se connecter ici : utilisez l’interface d’administration dédiée.",
+                403,
+            )
+        return self._open_session(user)
+
+    def login_admin(self, email: str, password: str) -> tuple[str, User]:
+        user = self._check_credentials(email, password)
+        if user.role != "ADMIN":
+            raise ServiceError("Cette interface est réservée aux comptes administration.", 403)
+        return self._open_session(user)
+
+    def _check_credentials(self, email: str, password: str) -> User:
         user = self.repo.user_by_email(email or "")
         if not user or not check_password_hash(user.password_hash, password or ""):
             raise ServiceError("E-mail ou mot de passe incorrect.", 401)
         if user.disabled:
             raise ServiceError("Ce compte a été désactivé par l’administration.", 403)
+        return user
+
+    def _open_session(self, user: User) -> tuple[str, User]:
         token = secrets.token_hex(24)
         self.repo.insert_session(token, user.id, self.iso())
         return token, user

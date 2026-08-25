@@ -9,8 +9,8 @@ from twolate.domain import public_user
 
 
 def test_demo_credentials_login(client):
+    # Les comptes applicatifs passent par le flux principal…
     for email, password, role in (
-        ("admin@2late.com", "admin", "ADMIN"),
         ("prof@2late.com", "prof", "PROF"),
         ("marc@2late.com", "marc", "RELAIS"),
         ("etu@2late.com", "etu", "ETUDIANT"),
@@ -19,9 +19,10 @@ def test_demo_credentials_login(client):
         assert r.status_code == 200, r.get_json()
         user = r.get_json()["user"]
         assert user["role"] == role
-        assert user["email"] == email
-        assert "password" not in user
-        assert "password_hash" not in user
+    # …et le compte ADMIN uniquement par le point d’entrée dédié.
+    r = client.post("/api/admin/login", json={"email": "admin@2late.com", "password": "admin"})
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()["user"]["role"] == "ADMIN"
 
 
 def test_wrong_password_rejected(client):
@@ -94,3 +95,24 @@ def test_logout_invalidates_session(client, etu):
     client.post("/api/auth/logout", headers=etu)
     r = client.get("/api/auth/me", headers=etu)
     assert r.status_code == 401
+
+
+def test_admin_cannot_login_on_main_site(client):
+    """Un compte ADMIN ne doit jamais se connecter sur l'app principale."""
+    r = client.post("/api/auth/login", json={"email": "admin@2late.com", "password": "admin"})
+    assert r.status_code == 403
+    assert "administration" in r.get_json()["error"].lower()
+
+
+def test_admin_login_endpoint_rejects_non_admin(client):
+    """L'interface d'admin n'accepte que les comptes ADMIN."""
+    r = client.post("/api/admin/login", json={"email": "etu@2late.com", "password": "etu"})
+    assert r.status_code == 403
+
+
+def test_admin_login_endpoint_accepts_admin(client):
+    r = client.post("/api/admin/login", json={"email": "admin@2late.com", "password": "admin"})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["user"]["role"] == "ADMIN"
+    assert "password" not in body["user"]

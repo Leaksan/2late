@@ -57,6 +57,16 @@ def login():
     return resp
 
 
+@api.post("/admin/login")
+def admin_login():
+    """Connexion réservée aux comptes administration (interface dédiée)."""
+    data = request.get_json(silent=True) or {}
+    token, user = current_app.services.login_admin(data.get("email") or "", data.get("password") or "")
+    resp = jsonify({"token": token, "user": public_user(user)})
+    resp.set_cookie("twolate_session", token, httponly=True, samesite="Lax")
+    return resp
+
+
 @api.post("/auth/register")
 def register():
     data = request.get_json(silent=True) or {}
