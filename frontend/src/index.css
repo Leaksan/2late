@@ -262,3 +262,19 @@
 }
 .time-chip b { color: var(--foreground); font-weight: 700; }
 .time-chip-day { color: var(--ink-faint); }
+
+/* ---------- Créneau ciblé depuis l'accueil : liseré vert + pulse ---------- */
+.slot-highlight {
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px var(--green);
+  animation: slotPulse 2s ease;
+}
+@keyframes slotPulse {
+  0%,
+  55% {
+    box-shadow: 0 0 0 4px var(--green);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--green);
+  }
+}

@@ -168,8 +168,18 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
 
   useEffect(() => {
     if (!highlightSlotId) return;
-    const el = document.getElementById(`slot-${highlightSlotId}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    let tries = 0;
+    const id = window.setInterval(() => {
+      tries += 1;
+      const el = document.getElementById(`slot-${highlightSlotId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.clearInterval(id);
+      } else if (tries > 20) {
+        window.clearInterval(id);
+      }
+    }, 150);
+    return () => window.clearInterval(id);
   }, [highlightSlotId, slots]);
 
   const scrollToSlot = (slotId: string) => {
@@ -326,7 +336,7 @@ export function ScheduleScreen({ highlightSlotId, openNoteId }: { highlightSlotI
             const note = notes.find((n) => n.slotId === s.id);
             const ends = s.evalStartsAt && s.evalMinutes ? Date.parse(s.evalStartsAt) + s.evalMinutes * 60_000 : 0;
             return (
-              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", (highlightSlotId === s.id || localHighlight === s.id) && "ring-2 ring-primary")}>
+              <Card id={`slot-${s.id}`} key={s.id} className={cn("mb-2 flex gap-3 p-3", (highlightSlotId === s.id || localHighlight === s.id) && "slot-highlight")}>
                 <div className="flex w-14 flex-col items-center justify-center rounded-xl border border-border bg-card-2 py-2 text-center">
                   <b>{s.start}</b>
                   <span className="text-[11px] text-muted-foreground">{s.end}</span>

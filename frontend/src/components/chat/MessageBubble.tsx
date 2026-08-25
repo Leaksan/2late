@@ -80,7 +80,7 @@ export function MessageBubble({
 
   return (
     <div
-      className={`relative flex max-w-[86%] gap-2 ${mine ? "ml-auto flex-row-reverse" : ""}`}
+      className={`relative flex max-w-[86%] select-none gap-2 touch-pan-y ${mine ? "ml-auto flex-row-reverse" : ""}`}
       onContextMenu={(e) => {
         e.preventDefault();
         onMenu(message);
