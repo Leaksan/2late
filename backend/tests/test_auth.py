@@ -19,8 +19,12 @@ def test_demo_credentials_login(client):
         assert r.status_code == 200, r.get_json()
         user = r.get_json()["user"]
         assert user["role"] == role
-    # …et le compte ADMIN uniquement par le point d’entrée dédié.
-    r = client.post("/api/admin/login", json={"email": "admin@2late.com", "password": "admin"})
+    # …et le compte ADMIN peut aussi consulter le site principal…
+    r = client.post("/api/auth/login", json={"email": "admin@2late.com", "password": "admin"})
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()["user"]["role"] == "ADMIN"
+    # …mais son interface dédiée exige son identifiant administrateur.
+    r = client.post("/api/admin/login", json={"username": "admin", "password": "admin"})
     assert r.status_code == 200, r.get_json()
     assert r.get_json()["user"]["role"] == "ADMIN"
 
@@ -97,22 +101,36 @@ def test_logout_invalidates_session(client, etu):
     assert r.status_code == 401
 
 
-def test_admin_cannot_login_on_main_site(client):
-    """Un compte ADMIN ne doit jamais se connecter sur l'app principale."""
+def test_admin_can_browse_main_site(client):
+    """L'admin peut consulter le site applicatif avec son compte (e-mail)."""
     r = client.post("/api/auth/login", json={"email": "admin@2late.com", "password": "admin"})
-    assert r.status_code == 403
-    assert "administration" in r.get_json()["error"].lower()
-
-
-def test_admin_login_endpoint_rejects_non_admin(client):
-    """L'interface d'admin n'accepte que les comptes ADMIN."""
-    r = client.post("/api/admin/login", json={"email": "etu@2late.com", "password": "etu"})
-    assert r.status_code == 403
-
-
-def test_admin_login_endpoint_accepts_admin(client):
-    r = client.post("/api/admin/login", json={"email": "admin@2late.com", "password": "admin"})
     assert r.status_code == 200
-    body = r.get_json()
-    assert body["user"]["role"] == "ADMIN"
+    assert r.get_json()["user"]["role"] == "ADMIN"
+
+
+def test_admin_interface_requires_username(client):
+    """L'interface dédiée : identifiant admin + mot de passe."""
+    ok = client.post("/api/admin/login", json={"username": "admin", "password": "admin"})
+    assert ok.status_code == 200
+    bad_pw = client.post("/api/admin/login", json={"username": "admin", "password": "nope"})
+    assert bad_pw.status_code == 401
+    # Les comptes non-admin n'ont pas d'identifiant admin : refus.
+    not_admin = client.post("/api/admin/login", json={"username": "etu", "password": "etu"})
+    assert not_admin.status_code == 401
+    body = ok.get_json()
     assert "password" not in body["user"]
+    assert "password_hash" not in body["user"]
+
+
+def test_change_own_password(client):
+    """Changement de mot de passe : ancien requis, 6 caractères minimum."""
+    headers = auth_header(client, "etu@2late.com", "etu")
+    r = client.post("/api/auth/password", json={"currentPassword": "wrong", "newPassword": "nouveau123"}, headers=headers)
+    assert r.status_code == 403
+    r = client.post("/api/auth/password", json={"currentPassword": "etu", "newPassword": "123"}, headers=headers)
+    assert r.status_code == 400
+    r = client.post("/api/auth/password", json={"currentPassword": "etu", "newPassword": "nouveau123"}, headers=headers)
+    assert r.status_code == 200
+    # l'ancien ne marche plus, le nouveau oui
+    assert client.post("/api/auth/login", json={"email": "etu@2late.com", "password": "etu"}).status_code == 401
+    assert client.post("/api/auth/login", json={"email": "etu@2late.com", "password": "nouveau123"}).status_code == 200

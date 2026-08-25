@@ -48,6 +48,18 @@ def health():
 
 
 # ---------- auth ----------
+@api.post("/auth/password")
+@auth_required
+def change_password():
+    data = request.get_json(silent=True) or {}
+    current_app.services.change_password(
+        g.user,
+        data.get("currentPassword") or "",
+        data.get("newPassword") or "",
+    )
+    return jsonify({"ok": True})
+
+
 @api.post("/auth/login")
 def login():
     data = request.get_json(silent=True) or {}
@@ -59,9 +71,9 @@ def login():
 
 @api.post("/admin/login")
 def admin_login():
-    """Connexion réservée aux comptes administration (interface dédiée)."""
+    """Connexion réservée aux comptes administration (interface dédiée) : identifiant + mot de passe."""
     data = request.get_json(silent=True) or {}
-    token, user = current_app.services.login_admin(data.get("email") or "", data.get("password") or "")
+    token, user = current_app.services.login_admin(data.get("username") or "", data.get("password") or "")
     resp = jsonify({"token": token, "user": public_user(user)})
     resp.set_cookie("twolate_session", token, httponly=True, samesite="Lax")
     return resp

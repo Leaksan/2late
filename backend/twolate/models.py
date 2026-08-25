@@ -15,6 +15,7 @@ class User:
     role: str
     created_at: str
     pole: Optional[str] = None
+    username: Optional[str] = None
     whatsapp: Optional[str] = None
     disabled: bool = False
 

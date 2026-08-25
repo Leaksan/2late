@@ -9,14 +9,6 @@ import { POLES, POLE_LABELS, type Pole } from "@/lib/types";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
 
-const DEMO = ADMIN_BUILD
-  ? [{ label: "Administration", email: "admin@2late.com", pwd: "admin" }]
-  : [
-      { label: "Prof / Informaticien", email: "prof@2late.com", pwd: "prof" },
-      { label: "Relais STI", email: "marc@2late.com", pwd: "marc" },
-      { label: "Étudiant STI", email: "etu@2late.com", pwd: "etu" },
-    ];
-
 export function AuthScreen() {
   const { login, register } = useStore();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -126,28 +118,6 @@ export function AuthScreen() {
             )}
           </p>
  )}
-
-          {mode === "login" && (
-            <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/40 p-3">
-              <h4 className="mb-2 text-over uppercase text-muted-foreground">Comptes de démonstration</h4>
-              {DEMO.map((d) => (
-                <button
-                  key={d.email}
-                  type="button"
-                  className="flex w-full items-center justify-between border-b border-border/60 py-2 text-left text-[13px] last:border-0"
-                  onClick={() => {
-                    setEmail(d.email);
-                    setPassword(d.pwd);
-                  }}
-                >
-                  <span>
-                    <b className="font-semibold text-foreground">{d.label}</b> — {d.email}
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">••••</span>
-                </button>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

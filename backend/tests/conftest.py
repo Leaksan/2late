@@ -39,7 +39,10 @@ def svc(app):
 
 def auth_header(client, email: str, password: str, admin: bool = False) -> dict:
     r = client.post(
-        "/api/admin/login" if admin else "/api/auth/login",
+        "/api/admin/login",
+        json={"username": email.split("@")[0], "password": password},
+    ) if admin else client.post(
+        "/api/auth/login",
         json={"email": email, "password": password},
     )
     assert r.status_code == 200, r.get_json()

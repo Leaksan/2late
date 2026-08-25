@@ -31,6 +31,7 @@ interface Store {
   offline: boolean;
   offlineBlocking: boolean;
   login(email: string, password: string): Promise<string | null>;
+  adminLogin(username: string, password: string): Promise<string | null>;
   register(name: string, email: string, password: string, pole: Pole): Promise<string | null>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
@@ -222,7 +223,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       try {
-        const data = await apiSend(ADMIN_BUILD ? "/api/admin/login" : "/api/auth/login", "POST", { email, password });
+        const data = await apiSend("/api/auth/login", "POST", { email, password });
+        setToken(data.token);
+        await refresh();
+        return null;
+      } catch (e: any) {
+        return e.message as string;
+      }
+    },
+    [refresh],
+  );
+
+  // Interface d'administration : identifiant + mot de passe.
+  const adminLogin = useCallback(
+    async (username: string, password: string) => {
+      try {
+        const data = await apiSend("/api/admin/login", "POST", { username, password });
         setToken(data.token);
         await refresh();
         return null;
@@ -260,6 +276,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       user,
+      login,
+      adminLogin,
       badges,
       milestones,
       myApplication,
@@ -267,7 +285,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       scheduleCache,
       offline,
       offlineBlocking,
-      login,
       register,
       logout,
       refresh,
@@ -489,6 +506,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       offline,
       offlineBlocking,
       login,
+      adminLogin,
       register,
       logout,
       refresh,

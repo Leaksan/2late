@@ -36,21 +36,21 @@ def seed_conn(conn, now: Optional[float] = None, uploads_dir=None) -> None:
         return hashed
 
     users = [
-        ("u-admin", "Administration 2late", "admin@2late.com", ph("admin"), "ADMIN", None, None, 0, h(24 * 30)),
-        ("u-prof", "Pr. Pierre Kadet", "prof@2late.com", ph("prof"), "PROF", None, "+241 06 10 20 30", 0, h(24 * 21)),
-        ("u-marc", "Marc Obame", "marc@2late.com", ph("marc"), "RELAIS", "STI", "+241 06 77 88 99", 0, h(24 * 18)),
-        ("u-nadia", "Nadia Nzigou", "nadia@2late.com", ph("nadia"), "ETUDIANT", "SEDG", "+241 06 55 12 87", 0, h(24 * 15)),
-        ("u-jean", "Jean Moulougui", "jean@2late.com", ph("jean"), "ETUDIANT", "MPI", "+241 06 22 33 44", 0, h(24 * 12)),
-        ("u-sophie", "Sophie Bouanga", "sophie@2late.com", ph("sophie"), "ETUDIANT", "SVT", None, 0, h(24 * 10)),
-        ("u-etu", "Compte Étudiant Démo", "etu@2late.com", ph("etu"), "ETUDIANT", "STI", "+241 06 11 22 33", 0, h(24 * 9)),
-        ("u-arnaud", "Arnaud Bilie", "arnaud@2late.com", ph("arnaud"), "ETUDIANT", "STI", "+241 06 44 55 66", 0, h(24 * 8)),
-        ("u-paul", "Paul Nguema", "paul@2late.com", ph("paul"), "ETUDIANT", "MPI", None, 0, h(24 * 7)),
-        ("u-lea", "Léa Mengue", "lea@2late.com", ph("lea"), "ETUDIANT", "SHS", "+241 06 66 77 55", 0, h(24 * 6)),
-        ("u-chris", "Chris Ibinga", "chris@2late.com", ph("chris"), "ETUDIANT", "SEDG", None, 0, h(24 * 5)),
+        ("u-admin", "Administration 2late", "admin@2late.com", ph("admin"), "ADMIN", None, None, "admin", 0, h(24 * 30)),
+        ("u-prof", "Pr. Pierre Kadet", "prof@2late.com", ph("prof"), "PROF", None, "+241 06 10 20 30", None, 0, h(24 * 21)),
+        ("u-marc", "Marc Obame", "marc@2late.com", ph("marc"), "RELAIS", "STI", "+241 06 77 88 99", None, 0, h(24 * 18)),
+        ("u-nadia", "Nadia Nzigou", "nadia@2late.com", ph("nadia"), "ETUDIANT", "SEDG", "+241 06 55 12 87", None, 0, h(24 * 15)),
+        ("u-jean", "Jean Moulougui", "jean@2late.com", ph("jean"), "ETUDIANT", "MPI", "+241 06 22 33 44", None, 0, h(24 * 12)),
+        ("u-sophie", "Sophie Bouanga", "sophie@2late.com", ph("sophie"), "ETUDIANT", "SVT", None, None, 0, h(24 * 10)),
+        ("u-etu", "Compte Étudiant Démo", "etu@2late.com", ph("etu"), "ETUDIANT", "STI", "+241 06 11 22 33", None, 0, h(24 * 9)),
+        ("u-arnaud", "Arnaud Bilie", "arnaud@2late.com", ph("arnaud"), "ETUDIANT", "STI", "+241 06 44 55 66", None, 0, h(24 * 8)),
+        ("u-paul", "Paul Nguema", "paul@2late.com", ph("paul"), "ETUDIANT", "MPI", None, None, 0, h(24 * 7)),
+        ("u-lea", "Léa Mengue", "lea@2late.com", ph("lea"), "ETUDIANT", "SHS", "+241 06 66 77 55", None, 0, h(24 * 6)),
+        ("u-chris", "Chris Ibinga", "chris@2late.com", ph("chris"), "ETUDIANT", "SEDG", None, None, 0, h(24 * 5)),
     ]
     conn.executemany(
-        "INSERT INTO users (id, name, email, password_hash, role, pole, whatsapp, disabled, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO users (id, name, email, password_hash, role, pole, whatsapp, username, disabled, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
         users,
     )
 

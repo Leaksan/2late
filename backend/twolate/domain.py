@@ -542,6 +542,7 @@ def public_user(user: User) -> dict:
         "id": user.id,
         "name": user.name,
         "email": user.email,
+        "username": user.username,
         "role": user.role,
         "pole": user.pole,
         "whatsapp": user.whatsapp,

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL,
   pole TEXT,
   whatsapp TEXT,
+  username TEXT,
   disabled INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
@@ -226,6 +227,16 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    conn.commit()
+
+    # Migration légère : bases existantes sans la colonne username.
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN username TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # colonne déjà présente
+    # Compte admin historique sans identifiant : on lui donne « admin ».
+    conn.execute("UPDATE users SET username='admin' WHERE id='u-admin' AND username IS NULL")
     conn.commit()
 
 

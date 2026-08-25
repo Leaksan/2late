@@ -122,19 +122,29 @@ class Services:
 
     # ---------- auth ----------
     def login(self, email: str, password: str) -> tuple[str, User]:
+        # Site applicatif : tout le monde, y compris l'admin (consultation).
         user = self._check_credentials(email, password)
-        if user.role == "ADMIN":
-            raise ServiceError(
-                "Les comptes administration ne peuvent pas se connecter ici : utilisez l’interface d’administration dédiée.",
-                403,
-            )
         return self._open_session(user)
 
-    def login_admin(self, email: str, password: str) -> tuple[str, User]:
-        user = self._check_credentials(email, password)
+    def login_admin(self, username: str, password: str) -> tuple[str, User]:
+        # Interface d'administration : identifiant + mot de passe, ADMIN uniquement.
+        user = self.repo.user_by_username(username or "")
+        if not user or not check_password_hash(user.password_hash, password or ""):
+            raise ServiceError("Identifiant ou mot de passe incorrect.", 401)
+        if user.disabled:
+            raise ServiceError("Ce compte a été désactivé.", 403)
         if user.role != "ADMIN":
             raise ServiceError("Cette interface est réservée aux comptes administration.", 403)
         return self._open_session(user)
+
+    def change_password(self, user: User, current: str, new: str) -> None:
+        user = self.require(user)
+        if not check_password_hash(user.password_hash, current or ""):
+            raise ServiceError("Mot de passe actuel incorrect.", 403)
+        if len((new or "").strip()) < 6:
+            raise ServiceError("Le nouveau mot de passe doit contenir au moins 6 caractères.", 400)
+        user.password_hash = generate_password_hash((new or "").strip())
+        self.repo.update_user(user)
 
     def _check_credentials(self, email: str, password: str) -> User:
         user = self.repo.user_by_email(email or "")

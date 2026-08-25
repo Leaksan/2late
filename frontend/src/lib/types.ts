@@ -93,6 +93,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   role: Role;
   pole?: Pole | null;
   whatsapp?: string | null;

@@ -57,12 +57,18 @@ class Repo:
             role=row["role"],
             pole=row["pole"],
             whatsapp=row["whatsapp"],
+            username=row["username"] if "username" in row.keys() else None,
             disabled=bool(row["disabled"]),
             created_at=row["created_at"],
         )
 
     def user_by_id(self, user_id: str) -> Optional[User]:
         return self._user(self.conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
+
+    def user_by_username(self, username: str) -> Optional[User]:
+        return self._user(
+            self.conn.execute("SELECT * FROM users WHERE lower(username)=?", (username.strip().lower(),)).fetchone()
+        )
 
     def user_by_email(self, email: str) -> Optional[User]:
         return self._user(
@@ -74,16 +80,16 @@ class Repo:
 
     def insert_user(self, u: User) -> None:
         self.conn.execute(
-            "INSERT INTO users (id, name, email, password_hash, role, pole, whatsapp, disabled, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
-            (u.id, u.name, u.email, u.password_hash, u.role, u.pole, u.whatsapp, int(u.disabled), u.created_at),
+            "INSERT INTO users (id, name, email, password_hash, role, pole, whatsapp, username, disabled, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (u.id, u.name, u.email, u.password_hash, u.role, u.pole, u.whatsapp, u.username, int(u.disabled), u.created_at),
         )
         self.conn.commit()
 
     def update_user(self, u: User) -> None:
         self.conn.execute(
-            "UPDATE users SET name=?, email=?, password_hash=?, role=?, pole=?, whatsapp=?, disabled=? WHERE id=?",
-            (u.name, u.email, u.password_hash, u.role, u.pole, u.whatsapp, int(u.disabled), u.id),
+            "UPDATE users SET name=?, email=?, password_hash=?, role=?, pole=?, whatsapp=?, username=?, disabled=? WHERE id=?",
+            (u.name, u.email, u.password_hash, u.role, u.pole, u.whatsapp, u.username, int(u.disabled), u.id),
         )
         self.conn.commit()
 
