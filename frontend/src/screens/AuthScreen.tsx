@@ -51,6 +51,9 @@ export function AuthScreen() {
               <div className="space-y-2">
                 <Label>Nom complet</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grace Ondo" autoComplete="name" />
+                <p className="text-xs text-muted-foreground">
+                  Merci d’indiquer votre <b>vrai nom</b> (prénom et nom), pas un pseudonyme : vos enseignants et l’administration vous identifieront avec celui-ci (dépôts de devoirs, notes, relais).
+                </p>
               </div>
             )}
             <div className="space-y-2">
