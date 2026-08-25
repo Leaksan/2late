@@ -1,0 +1,22 @@
+# Blueprint Render — déploiement Docker du backend Flask + SPA.
+# Sur Render : New + → Blueprint → sélectionner ce dépôt → Deploy.
+# L'URL sera https://2late.onrender.com (nom du service ci-dessous).
+services:
+  - type: web
+    name: 2late
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: TWOLATE_SECRET
+        generateValue: true
+      # Plan gratuit : pas de disque persistant — la base SQLite de démo
+      # se re-seme à chaque redéploiement (acceptable pour explorer l'app).
+      # Pour des données durables : passer en Starter et décommenter le disque.
+      # - key: TWOLATE_DB
+      #   value: /data/2late.db
+      # disk:
+      #   name: 2late-data
+      #   mountPath: /data
+      #   sizeGB: 1
